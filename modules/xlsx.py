@@ -2,6 +2,7 @@ import os
 from openpyxl import load_workbook
 import pandas as pd
 
+# Function to read xlsx file and return data as DataFrame. xlsx folder is not needed in path
 def xlsx_to_array(xlsx_file):
     # Set path to /xlsx/xlsx_file
     xlsx_file = os.path.join("xlsx", xlsx_file)
@@ -40,8 +41,12 @@ def xlsx_to_array(xlsx_file):
             # Increment the row number
             row_no += 1
 
-    df = pd.DataFrame(data, columns=["Grupa", "Redni_broj", "Broj indeksa", "Prezime", "Ime"])
-    return df
+    if xlsx_file == "xlsx/PRIJAVE.xlsx":
+        # Remove 0th, 1st and 2nd columns from data
+        data = [row[3:] for row in data]
+        return pd.DataFrame(data, columns=["Ime", "Prezime", "Broj indeksa"])
+    else:
+        return pd.DataFrame(data, columns=["Grupa", "Redni_broj", "Broj indeksa", "Prezime", "Ime"])
 
 
 def xlsx_k_to_array(workbook_path):
