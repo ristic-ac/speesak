@@ -1,4 +1,3 @@
-# Group df_complete_combined by "Način slušanja" and count number of students 
 def student_status_stats(df_complete_combined):
     df_complete_grouped = df_complete_combined.groupby("Način slušanja").size()
     print("Number of students by 'Način slušanja': ")

@@ -66,7 +66,11 @@ print("Number of groups per file: ")
 print(availability_by_groups) 
 
 # Load data from xlsx/PRIJAVE.xlsx
-df_poll = mxlsx.xlsx_to_array("PRIJAVE.xlsx")
+df_poll = pd.read_excel("xlsx/PRIJAVE.xlsx")
+df_poll = df_poll[["Ime", "Prezime", "Broj indeksa (npr. RA 123/2023)"]]
+# Change Broj indeksa (npr. RA 123/2023) column name to Broj indeksa
+df_poll = df_poll.rename(columns={"Broj indeksa (npr. RA 123/2023)": "Broj indeksa"})
+print(df_poll)
 df_poll = mutils.refactor_indexes(df_poll)
 df_poll = mutils.exclude_non_payers(df_complete_combined, df_poll)
 df_poll = df_poll.reset_index(drop=True)
@@ -77,6 +81,9 @@ mstats.student_status_stats(df_poll)
 
 # Print students that are in df_poll and in df_groups_combined print them and remove them from df_poll
 df_poll = mutils.remove_polled_students_already_in_group(df_groups_combined, df_poll)
+# Obtain number of unqiue entries in column 'Broj indeksa'
+print("Number of unique entries in 'Broj indeksa': ", len(df_poll['Broj indeksa'].unique()))
+
 grouped = mstats.student_status_stats(df_poll)
 
 dfs = [(status,students) for status, students in df_poll.groupby('Način slušanja')]
@@ -98,20 +105,31 @@ if no_students_after_first_appointing - no_students_before_first_appointing != l
     print("Check if students are appointed correctly.")
     exit(1)
 
-# Change order of columns in df_groups_combined to: "Grupa", "Smer", "Broj indeksa", "Prezime", "Ime"
-df_groups_combined = df_groups_combined[["Smer", "Grupa", "Broj indeksa", "Prezime", "Ime"]]
+
+# Cast "Grupa" column to int
+df_groups_combined["Grupa"] = df_groups_combined["Grupa"].astype(int)
 
 # Sort df_groups_combined by "Smer" and "Grupa"
 df_groups_combined = df_groups_combined.sort_values(by=["Smer", "Grupa"])
+
+# Set control column "RB" and "RBG"
+df_groups_combined.reset_index(drop=True, inplace=True)
+df_groups_combined['RB'] = df_groups_combined.index + 1
+df_groups_combined['RBG'] = df_groups_combined.index % STUDENTS_PER_GROUP + 1
+
+df_groups_combined = df_groups_combined[["RB", 'RBG', "Smer", "Grupa", "Broj indeksa", "Prezime", "Ime"]]
+
+# Print all df_groups_combined data
+print(df_groups_combined.head(48))
 
 # Export df_groups_combined to schedules/regular_groups.xlsx
 df_groups_combined.to_excel("schedules/regular_groups.xlsx", index=False)
 
 # Load data from additinal-classrooms.csv
 df_additional_classrooms = pd.read_csv("additional-classrooms/classrooms.csv")
+df_additional_classrooms = df_additional_classrooms.sort_values(by=["Termin", "Ucionica"], ascending=True)
 
 # Sort df_additional_classrooms by "Ucionica"
-df_additional_classrooms = df_additional_classrooms.sort_values(by=["Ucionica"])
 df_additional_classrooms.reset_index(drop=True, inplace=True)
 print(df_additional_classrooms)
 
@@ -130,7 +148,6 @@ print("To appoint: ", additional_students_to_appoint)
 
 # For each classroom in df_additional_classrooms
 additional_students_appointed = mutils.appoint_residual_students(df_additional_classrooms, df_residual_students, additional_students_appointed, additional_students_to_appoint)
-print(df_residual_students)
 
 print("Appointed: ", additional_students_appointed)
 print("To appoint: ", additional_students_to_appoint)
@@ -140,8 +157,16 @@ if additional_students_appointed != additional_students_to_appoint:
     print("Check if students are appointed correctly.")
     exit(1)
 
-# Drop "Način slušanja" column from df_residual_students
-df_residual_students = df_residual_students.drop(columns="Način slušanja")
+# Set control column "RB"
+df_residual_students["RB"] = df_residual_students.index + 1
+
+# Convert RBG column to int
+df_residual_students["RBG"] = df_residual_students["RBG"].astype(int)
+
+# Change order of columns in df_residual_students to: "RB", "RBG", "Termin", "Ucionica", "Broj indeksa", "Prezime", "Ime"
+df_residual_students = df_residual_students[["RB", "RBG", "Termin", "Ucionica", "Broj indeksa", "Prezime", "Ime"]]
+
+print(df_residual_students)
 
 # Export df_residual_students to schedules/additional_groups.xlsx
 df_residual_students.to_excel("schedules/additional_groups.xlsx", index=False)

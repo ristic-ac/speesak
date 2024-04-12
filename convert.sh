@@ -12,3 +12,6 @@ done
 
 # Print message
 echo "All .xls files are converted to .xlsx files"
+
+# Create folder schedules if it doesn't exist
+mkdir -p schedules

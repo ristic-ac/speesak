@@ -7,7 +7,7 @@ def refactor_indexes(df_poll):
         print("Lookup regex and change it to match the format of 'Broj indeksa' in PRIJAVE.xlsx")
         exit(1)
 
-    df_poll['Broj indeksa'] = df_poll_index[0] + " " + df_poll_index[1] + "/" + df_poll_index[2]
+    df_poll['Broj indeksa'] = df_poll_index[0].str.upper() + " " + df_poll_index[1] + "/" + df_poll_index[2]
     df_poll = df_poll.drop_duplicates(subset="Broj indeksa")
     return df_poll
 
@@ -56,13 +56,11 @@ def find_group(availability_by_groups):
 
 def appoint_to_existing_groups(df_groups_combined, availability_by_groups, dfs, appointed_student_indexes):
     for status, students in dfs:
-    # Foreach row in students
         for index, student in students.iterrows():
             study_program, group = find_group(availability_by_groups)
             if group is None:
                 print("No more groups available.")
                 break
-        # Add student to df_groups_combined
             df_groups_combined = df_groups_combined.append({"Grupa": group, "Broj indeksa": student["Broj indeksa"], "Prezime": student["Prezime"], "Ime": student["Ime"], "Smer": study_program}, ignore_index=True)
             appointed_student_indexes.append(student["Broj indeksa"])
     return df_groups_combined
@@ -74,22 +72,27 @@ def track_residual_students(dfs, appointed_student_indexes, residual_students):
                 residual_students.append(student)
 
 def appoint_residual_students(df_additional_classrooms, df_residual_students, additional_students_appointed, additional_students_to_appoint):
+    BROJ_MI = 32
+    BROJ_NTP = 16
     for index, row in df_additional_classrooms.iterrows():
         classroom = row["Ucionica"]
         time = row["Termin"]
         if classroom[:2] == "MI":
-            for _ in range(32):
+            for _ in range(BROJ_MI):
                 if additional_students_appointed >= additional_students_to_appoint:
                     print("Appointed all students.")
                     return additional_students_appointed
                 df_residual_students.loc[additional_students_appointed, "Ucionica"] = classroom
                 df_residual_students.loc[additional_students_appointed, "Termin"] = time
+                df_residual_students.loc[additional_students_appointed, "RBG"] = int(additional_students_appointed % BROJ_MI + 1)
                 additional_students_appointed += 1
+
         elif classroom[:3] == "NTP":
-            for _ in range(16):
+            for _ in range(BROJ_NTP):
                 if additional_students_appointed >= additional_students_to_appoint:
                     print("Appointed all students.")
                     return additional_students_appointed
                 df_residual_students.loc[additional_students_appointed, "Ucionica"] = classroom
                 df_residual_students.loc[additional_students_appointed, "Termin"] = time
+                df_residual_students.loc[additional_students_appointed, "RBG"] = int(additional_students_appointed % BROJ_NTP + 1)
                 additional_students_appointed += 1
