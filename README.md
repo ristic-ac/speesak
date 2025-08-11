@@ -1,73 +1,120 @@
-# speesak
+# **speesak**
 
-## Opis programa
+## 📌 Opis programa
 
-Ovaj program je namenjen za upravljanje spiskovima studenata na Fakultetu tehničkih nauka.
+**speesak** je alat namenjen za upravljanje spiskovima studenata na Fakultetu tehničkih nauka.  
+Omogućava jednostavno rukovanje podacima o studentima, raspoređivanje u grupe i generisanje rasporeda testova.
 
-Program omogućava:
+### Funkcionalnosti
 
-- Prebacivanje spiskova studenata iz formata .xls u .xlsx, uz pomoć `convert.sh` skripte
-- Proveru konzistentnosti spiskova studenata
-- Raspoređivanje studenata u već postojeće grupe, radi izrade rasporeda za testove
-- Kreiranje novih grupa studenata, od onih koji nisu raspoređeni u već postojeće grupe
-- Generisanje rasporeda za testove, uz mogućnost izbora datuma i vremena, kao i učionice u kojima će se testovi održati
+- ✅ Konverzija spiskova studenata iz **.xls** u **.xlsx** format (uz pomoć skripte `convert.sh`)
+- ✅ Provera konzistentnosti spiskova studenata
+- ✅ Raspoređivanje studenata u postojeće grupe radi izrade rasporeda testova
+- ✅ Kreiranje novih grupa za studente koji nisu raspoređeni
+- ✅ Generisanje rasporeda testova sa mogućnošću izbora datuma, vremena i učionica
 
-## Neophodni alati
+---
 
-- Python 3
-  - pandas
-  - openpyxl
-- LibreOffice
-- Docker i Docker Compose (za pokretanje u kontejneru)
+## 🛠 Neophodni alati
 
-## Uputstvo za korišćenje
+- **Python 3**
+  - `pandas`
+  - `openpyxl`
+- **LibreOffice**
+- **Docker** i **Docker Compose**
 
-Neophodno je:
+---
 
-1. Kreirati anketu za studente, tako da sadrži polja:
-    - Ime
-    - Prezime
-    - Smer (dropdown lista sa smerovima propisanim od strane fakulteta, RA, PSI, IN)
-    - Broj upisa (Broj, 1, 101, 240)
-    - Godina upisa (Broj, 2019, 2020, 2021, ...)
+## 📖 Uputstvo za korišćenje
 
-2. Kreirati direktorijum `xls/` u kome će se nalaziti originalni spiskovi studenata
-3. Smestiti originalne spiskove studenata u direktorijum `xls/`, dobijene od strane studentske službe (nastavničkog servisa)
-    - Imena spiskova je neophodno preimenovati u format:
-        - `XX.xls`, gde je XX oznaka smera propisana od strane fakulteta (RA, PSI, IN, ...) za spiskove po grupama
-        - `XXK.xls`, gde je XX oznaka smera, za kompletne spiskove studenata, to jest, spiskove iz kartice "Polaganje ispita" u okviru nastavničkog servisa
-4. U folderu `xlsx/` će se nalaziti konvertovani spiskovi studenata u formatu .xlsx, koji su potrebni za dalju obradu. Neophodno je kreirati direktorijum i smestiti datoteku:
-    - `PRIJAVE.xlsx` - spisak studenata koji su se prijavili za kolokvijum na formi, sa kolonama:
-        - Ime
-        - Prezime
-        - Smer
-        - Broj upisa
-        - Godina upisa
-5. Za dodatne termine neophodno je u datoteci `classrooms.csv` u okviru `additional-classrooms/` direktorijuma dodati učionice u kojima će se testovi održati sa kolonama:
-    - Ucionica
-    - Termin
-    Postoji primer datoteke `classrooms.csv` u okviru `additional-classrooms/` direktorijuma. Softver automatski zna da se u Mašinskom institutu testovi održavaju u učionicama od 32, a u NTP-u u učionicama od 16 mesta.
-6. Potrebno je da imate instaliran Docker i Docker Compose. Pokrenite sledeću komandu iz root direktorijuma projekta:
+### 1️⃣ Priprema ankete
 
-    ```bash
-    docker compose up --build
-    ```
+Kreirajte anketu za studente koja sadrži sledeća polja:
 
-    Ova komanda će izgraditi i pokrenuti kontejner sa svim potrebnim zavisnostima.
+- **Ime**
+- **Prezime**
+- **Smer** *(dropdown lista sa smerovima: RA, PSI, IN, ... propisanim od strane fakulteta)*
+- **Broj upisa** *(npr. 1, 101, 240)*
+- **Godina upisa** *(npr. 2019, 2020, 2021...)*
 
-7. Program `main.py` se pokreće automatski unutar Docker kontejnera.
-8. Rezultati obrade (spiskovi studenata) se nalaze u direktorijumu `schedules/`:
-    - `regular_groups.xlsx` – raspored studenata po postojećim grupama
-    - `additional_groups.xlsx` – raspored studenata po novim grupama
+---
 
-## Eventualne greške
+### 2️⃣ Priprema direktorijuma i spiskova
 
-Ukoliko se pri pokretanju `convert.sh` skripte javi greška:
+1. Kreirajte direktorijum `xls/` i u njega smestite originalne spiskove studenata dobijene od studentske službe.
+2. Preimenujte fajlove prema formatu:
+   - `XX.xls` → spiskovi po grupama  
+   - `XXK.xls` → kompletni spiskovi studenata (sa kartice **"Polaganje ispita"** u nastavničkom servisu)  
+     > *XX je oznaka smera: RA, PSI, IN...*
 
-`Warning: failed to read path from javaldx:`
+---
 
-Neophodno je instalirati `libreoffice-java-common` i `default-jre` pakete komandom:
+### 3️⃣ Konverzija fajlova
 
-`sudo apt-get install libreoffice-java-common default-jre`
+Konvertovani fajlovi će se nalaziti u direktorijumu `xlsx/`.  
+U njemu treba da bude i fajl **`PRIJAVE.xlsx`** sa prijavljenim studentima, u formatu:
 
-Ukoliko naravno, koristite Debian-based distribuciju.
+- **Ime**
+- **Prezime**
+- **Smer**
+- **Broj upisa**
+- **Godina upisa**
+
+---
+
+### 4️⃣ Podešavanje dodatnih termina
+
+U direktorijumu `additional-classrooms/` nalazi se fajl `classrooms.csv` sa učionicama i terminima:  
+Kolone:
+
+- **Ucionica**
+- **Termin**  
+
+Primer fajla je već dat u projektu.  
+> Softver automatski prepoznaje kapacitet:
+>
+> - Mašinski institut → učionice sa 32 mesta  
+> - NTP → učionice sa 16 mesta
+
+---
+
+### 5️⃣ Pokretanje preko Dockera
+
+Neophodno je imati instalirane **Docker** i **Docker Compose**.  
+Iz root direktorijuma projekta pokrenite:
+
+```bash
+docker compose up --build
+```
+
+Ovo će izgraditi i pokrenuti kontejner sa svim potrebnim zavisnostima.  
+Program `main.py` će se automatski pokrenuti unutar kontejnera.
+
+---
+
+### 6️⃣ Rezultati obrade
+
+Nakon izvršavanja, rezultati se nalaze u direktorijumu **`schedules/`**:
+
+- **`regular_groups.xlsx`** – raspored studenata po postojećim grupama
+- **`additional_groups.xlsx`** – raspored studenata po novim grupama
+
+---
+
+### ⚠ Rešavanje mogućih grešaka
+
+**Greška:**
+
+```text
+Warning: failed to read path from javaldx:
+```
+
+**Rešenje:**  
+
+Instalirajte sledeće pakete:
+
+```bash
+sudo apt-get install libreoffice-java-common default-jre
+```
+
+(važi za Debian-based distribucije)
