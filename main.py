@@ -10,95 +10,97 @@ STUDENTS_PER_GROUP = 16
 # Get all filenames from xlsx/
 xlsx_files = mos.get_xlsx_files()
 
-print(xlsx_files)
-
 # Find files with with two letters without extension
 xlsx_files = [f for f in xlsx_files if len(f) == 7]
-print(xlsx_files)
-
 # Modify filenames to not include .xlsx extension
 xlsx_files = [f.split(".")[0] for f in xlsx_files]
-print(xlsx_files)
-
 # Pair up files with and without K so that pairs are such as (file.xlsx, fileK.xlsx)
 xlsx_files = [(f + ".xlsx", f + "K.xlsx") for f in xlsx_files]
-print(xlsx_files)
 
-df_groups_combined = pd.DataFrame()
-df_complete_combined = pd.DataFrame()
+students_in_groups = pd.DataFrame()
+students_in_complete = pd.DataFrame()
 
-availability_by_groups = []
+classroom_availability_by_groups = []
 
-for xlsx_file, xlsx_k_file in xlsx_files:
-    print("----------------------------------------")
-    print("For files: ", xlsx_file, xlsx_k_file)
-    df_groups = mxlsx.xlsx_to_array(xlsx_file)
-    df_complete = mxlsx.xlsx_k_to_array(xlsx_k_file)
+for xlsx_file_name, xlsx_k_file_name in xlsx_files:
+    students_groups = mxlsx.convert_xlsx_groups_to_dataframe(xlsx_file_name)
+    students_complete = mxlsx.convert_xlsx_complete_to_dataframe(xlsx_k_file_name)
 
-    mutils.calculate_group_availability(STUDENTS_PER_GROUP, availability_by_groups, xlsx_file, df_groups)
+    mutils.calculate_group_availability(STUDENTS_PER_GROUP, classroom_availability_by_groups, xlsx_file_name, students_groups)
 
-    df_groups_combined = df_groups_combined.append(df_groups)
-    df_complete_combined = df_complete_combined.append(df_complete)
+    # We incrementaly add data to dataframes
+    students_in_groups = pd.concat([students_in_groups, students_groups], ignore_index=True)
+    students_in_complete = pd.concat([students_in_complete, students_complete], ignore_index=True)
 
-    # Find intersection based on "Broj indeksa"
-    df_merged = pd.merge(df_groups, df_complete, on="Broj indeksa", how="inner")
-
-    # Find 'Broj indeksa' that are in df but not in df_merged
-    mutils.find_inconsistencies(df_groups, df_merged)
-
-    print()
+    # Check if students in groups are also in complete list
+    students_in_groups_missing_from_complete = students_groups[~students_groups['Broj indeksa'].isin(students_complete['Broj indeksa'])]
+    if not students_in_groups_missing_from_complete.empty:
+        print("Studenti koji su u grupama, a nisu u kompletnom spisku: ")
+        print(students_in_groups_missing_from_complete)
+        exit(1)
 
 # Drop "Redni broj" column from df_groups_combined
-df_groups_combined = df_groups_combined.drop(columns="Redni_broj")
+students_in_groups = students_in_groups.drop(columns="Redni_broj")
 
 # Add column Smer, which is first two letters "Broj indeksa"
-df_groups_combined['Smer'] = df_groups_combined['Broj indeksa'].str[:2]
+students_in_groups['Smer'] = students_in_groups['Broj indeksa'].str[:2]
 
-mstats.student_status_stats(df_complete_combined)
-mstats.student_not_regular_in_group_stats(df_groups_combined, df_complete_combined)
+mstats.student_status_stats(students_in_complete)
+mstats.student_not_regular_in_group_stats(students_in_groups, students_in_complete)
 
-# Wait for user input to continue
-# input("Press Enter to continue...")
+print("Broj grupa po smerovima: ")
+for smer, group_stats in classroom_availability_by_groups:
+    nonzero_groups = group_stats[group_stats > 0]
+    if not nonzero_groups.empty:
+        print(f"Smer: {smer}")
+        for grupa, slobodna_mesta in nonzero_groups.items():
+            print(f"  Grupa {grupa}: {slobodna_mesta} slobodnih mesta")
+print("=============================")
+
+print("Ukupan broj mesta u svim grupama: ")
+total_available_places = sum(df_group_stats.sum() for _, df_group_stats in classroom_availability_by_groups
+)
+print(total_available_places)
 print()
 
-# For each file print number of groups
-print("Number of groups per file: ")
-print(availability_by_groups) 
-
 # Load data from xlsx/PRIJAVE.xlsx
-df_poll = pd.read_excel("xlsx/PRIJAVE.xlsx")
-df_poll = df_poll[["Ime", "Prezime", "Broj indeksa (npr. RA 123/2023)"]]
-# Change Broj indeksa (npr. RA 123/2023) column name to Broj indeksa
-df_poll = df_poll.rename(columns={"Broj indeksa (npr. RA 123/2023)": "Broj indeksa"})
-print(df_poll)
-df_poll = mutils.refactor_indexes(df_poll)
-df_poll = mutils.exclude_non_payers(df_complete_combined, df_poll)
-df_poll = df_poll.reset_index(drop=True)
+students_poll = pd.read_excel("xlsx/PRIJAVE.xlsx")
+students_poll = students_poll[["Ime", "Prezime", "Smer", "Broj upisa", "Godina upisa"]].copy()
+students_poll["Broj indeksa"] = (
+    students_poll["Smer"] + " " +
+    students_poll["Broj upisa"].astype(str) + "/" +
+    students_poll["Godina upisa"].astype(str)
+)
+students_poll = students_poll[["Ime", "Prezime", "Broj indeksa"]]
 
-# For each row in df_poll, find "Način slušanja" in df_complete_combined and add it to df_poll
-df_poll['Način slušanja'] = df_poll['Broj indeksa'].map(df_complete_combined.set_index('Broj indeksa')['Način slušanja'])
-mstats.student_status_stats(df_poll)
+print("Broj studenata u prijavama: ", len(students_poll))
+students_poll = mutils.refactor_indexes(students_poll)
+students_poll = students_poll.drop_duplicates(subset="Broj indeksa")
+print("Broj studenata u prijavama nakon izbacivanja duplikata: ", len(students_poll))
 
-# Print students that are in df_poll and in df_groups_combined print them and remove them from df_poll
-df_poll = mutils.remove_polled_students_already_in_group(df_groups_combined, df_poll)
-# Obtain number of unqiue entries in column 'Broj indeksa'
-print("Number of unique entries in 'Broj indeksa': ", len(df_poll['Broj indeksa'].unique()))
+students_poll = mutils.exclude_non_payers(students_in_complete, students_poll)
+print("Broj studenata u prijavama nakon izbacivanja neplatiša: ", len(students_poll))
+# print(students_poll)
+print()
 
-grouped = mstats.student_status_stats(df_poll)
+students_poll['Način slušanja'] = students_poll['Broj indeksa'].map(students_in_complete.set_index('Broj indeksa')['Način slušanja'])
+mstats.student_status_stats(students_poll, poll=True)
 
-dfs = [(status,students) for status, students in df_poll.groupby('Način slušanja')]
+students_poll = mutils.remove_polled_students_already_in_group(students_in_groups, students_poll)
+grouped = mstats.student_status_stats(students_poll, poll=True)
 
+dfs = [(status,students) for status, students in students_poll.groupby('Način slušanja')]
 dfs = mutils.prioritize_new_students(dfs)
 
 appointed_student_indexes = []
-no_students_before_first_appointing = len(df_groups_combined)
+no_students_before_first_appointing = len(students_in_groups)
 
-df_groups_combined = mutils.appoint_to_existing_groups(df_groups_combined, availability_by_groups, dfs, appointed_student_indexes)
+students_in_groups = mutils.appoint_to_existing_groups(students_in_groups, classroom_availability_by_groups, dfs, appointed_student_indexes)
 
 residual_students = []
 mutils.track_residual_students(dfs, appointed_student_indexes, residual_students)
 
-no_students_after_first_appointing = len(df_groups_combined)
+no_students_after_first_appointing = len(students_in_groups)
 
 if no_students_after_first_appointing - no_students_before_first_appointing != len(appointed_student_indexes):
     print("Error: Number of appointed students is not equal to difference between number of students before and after appointing.")
@@ -106,31 +108,23 @@ if no_students_after_first_appointing - no_students_before_first_appointing != l
     exit(1)
 
 
-# Cast "Grupa" column to int
-df_groups_combined["Grupa"] = df_groups_combined["Grupa"].astype(int)
+students_in_groups["Grupa"] = students_in_groups["Grupa"].astype(int)
 
-# Sort df_groups_combined by "Smer" and "Grupa"
-df_groups_combined = df_groups_combined.sort_values(by=["Smer", "Grupa"])
+students_in_groups = students_in_groups.sort_values(by=["Smer", "Grupa"])
 
-# Set control column "RB" and "RBG"
-df_groups_combined.reset_index(drop=True, inplace=True)
-df_groups_combined['RB'] = df_groups_combined.index + 1
-df_groups_combined['RBG'] = df_groups_combined.index % STUDENTS_PER_GROUP + 1
+# Set control column "RB" and "RBG", these mean "Redni Broj" and "Redni Broj u Grupi" (control numbers)
+students_in_groups.reset_index(drop=True, inplace=True)
+students_in_groups['RB'] = students_in_groups.index + 1
+students_in_groups['RBG'] = students_in_groups.index % STUDENTS_PER_GROUP + 1
 
-df_groups_combined = df_groups_combined[["RB", 'RBG', "Smer", "Grupa", "Broj indeksa", "Prezime", "Ime"]]
+students_in_groups = students_in_groups[["RB", 'RBG', "Smer", "Grupa", "Broj indeksa", "Prezime", "Ime"]]
 
-# Print all df_groups_combined data
-print(df_groups_combined.head(48))
+students_in_groups.to_excel("schedules/regular_groups.xlsx", index=False)
 
-# Export df_groups_combined to schedules/regular_groups.xlsx
-df_groups_combined.to_excel("schedules/regular_groups.xlsx", index=False)
-
-# Load data from additinal-classrooms.csv
 df_additional_classrooms = pd.read_csv("additional-classrooms/classrooms.csv")
 df_additional_classrooms = df_additional_classrooms.sort_values(by=["Termin", "Ucionica"], ascending=True)
-
-# Sort df_additional_classrooms by "Ucionica"
 df_additional_classrooms.reset_index(drop=True, inplace=True)
+print("Ucitao dodatne ucionice: ")
 print(df_additional_classrooms)
 
 # Convert residual_students to DataFrame
@@ -143,18 +137,13 @@ df_residual_students["Termin"] = ""
 
 additional_students_appointed = 0
 additional_students_to_appoint = len(df_residual_students)
-print("To appoint: ", additional_students_to_appoint)
-# print(df_residual_students)
 
 # For each classroom in df_additional_classrooms
 additional_students_appointed = mutils.appoint_residual_students(df_additional_classrooms, df_residual_students, additional_students_appointed, additional_students_to_appoint)
 
-print("Appointed: ", additional_students_appointed)
-print("To appoint: ", additional_students_to_appoint)
-
 if additional_students_appointed != additional_students_to_appoint:
-    print("Error: Number of appointed students is not equal to number of students to appoint.")
-    print("Check if students are appointed correctly.")
+    print("Greška: Broj raspoređenih studenata nije jednak broju studenata koje treba rasporediti.")
+    print("Proverite da li su studenti pravilno raspoređeni.")
     exit(1)
 
 # Set control column "RB"
@@ -165,8 +154,6 @@ df_residual_students["RBG"] = df_residual_students["RBG"].astype(int)
 
 # Change order of columns in df_residual_students to: "RB", "RBG", "Termin", "Ucionica", "Broj indeksa", "Prezime", "Ime"
 df_residual_students = df_residual_students[["RB", "RBG", "Termin", "Ucionica", "Broj indeksa", "Prezime", "Ime"]]
-
-print(df_residual_students)
 
 # Export df_residual_students to schedules/additional_groups.xlsx
 df_residual_students.to_excel("schedules/additional_groups.xlsx", index=False)

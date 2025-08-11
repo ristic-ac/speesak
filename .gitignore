@@ -165,4 +165,11 @@ xls/*
 # All files within xlsx folder
 xlsx/*
 schedules/*
+
+# All files within additional-classrooms folder
+# except for the example CSV file
+# This is to ensure that the example file is always available
 additional-classrooms/*
+!additional-classrooms/classrooms.csv.example
+
+speesak-env/
