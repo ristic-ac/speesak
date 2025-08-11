@@ -6,8 +6,8 @@ def refactor_indexes(df_poll):
     df_poll_index = df_poll_index.str.extract(r"([A-Za-z]{2})\s?(\d+)[\/-](\d+)")
 
     if len(df_poll_index) != len(df_poll):
-        print("Error: Number of extracted data is not equal to number of rows in df_poll, possibly because of regex format.")
-        print("Lookup regex and change it to match the format of 'Broj indeksa' in PRIJAVE.xlsx")
+        print("Greška: Broj izvučenih podataka nije jednak broju redova u df_poll, verovatno zbog formata regularnog izraza.")
+        print("Proverite regex i promenite ga da odgovara formatu 'Broj indeksa' u PRIJAVE.xlsx")
         exit(1)
 
     df_poll['Broj indeksa'] = df_poll_index[0].str.upper() + " " + df_poll_index[1] + "/" + df_poll_index[2]
