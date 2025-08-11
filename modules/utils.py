@@ -38,6 +38,8 @@ def exclude_non_payers(df_complete_combined, df_poll):
     """
     Uklanja studente iz DataFrame-a prijava koji nisu prisutni u kompletnom kombinovanom DataFrame-u (tj. one koji nisu platili).
 
+    UPOZORENJE: Ova funkcija trenutno nije ispravna i ne treba je koristiti dok se ne doradi!
+
     Argumenti:
         df_complete_combined (pd.DataFrame): DataFrame koji sadrži kompletnu listu studenata (npr. onih koji su platili).
         df_poll (pd.DataFrame): DataFrame koji sadrži listu studenata koji su se prijavili (npr. za ispit).
@@ -48,15 +50,20 @@ def exclude_non_payers(df_complete_combined, df_poll):
     Sporedni efekti:
         Ispisuje broj i detalje studenata iz df_poll koji nisu prisutni u df_complete_combined.
     """
-    df_poll_not_in_complete = df_poll[~df_poll['Broj indeksa'].isin(df_complete_combined['Broj indeksa'])]
-    print("Broj studenata u prijavama koji nisu u kompletnoj listi (nisu platili): ", len(df_poll_not_in_complete)) # TODO: Check if missing from complete are non-payers
-    if not df_poll_not_in_complete.empty:
-        print("Studenti u prijavama koji nisu u kompletnoj listi: ")
-        print(df_poll_not_in_complete)
-    print()
-    df_poll = df_poll[~df_poll['Broj indeksa'].isin(df_poll_not_in_complete['Broj indeksa'])]
-    df_poll = df_poll.reset_index(drop=True)
-    return df_poll
+    import warnings
+    warnings.warn("exclude_non_payers se ne koristi, jer se treba doraditi, nije dobro trenutno kako radi.", UserWarning)
+    raise NotImplementedError("exclude_non_payers se ne koristi, jer se treba doraditi, nije dobro trenutno kako radi.")
+
+    # Sledeći kod je ostavljen za referencu, ali se ne izvršava dok se funkcija ne doradi:
+    # df_poll_not_in_complete = df_poll[~df_poll['Broj indeksa'].isin(df_complete_combined['Broj indeksa'])]
+    # print("Broj studenata u prijavama koji nisu u kompletnoj listi (nisu platili): ", len(df_poll_not_in_complete)) # TODO: Check if missing from complete are non-payers
+    # if not df_poll_not_in_complete.empty:
+    #     print("Studenti u prijavama koji nisu u kompletnoj listi: ")
+    #     print(df_poll_not_in_complete)
+    # print()
+    # df_poll = df_poll[~df_poll['Broj indeksa'].isin(df_poll_not_in_complete['Broj indeksa'])]
+    # df_poll = df_poll.reset_index(drop=True)
+    # return df_poll
 
 def calculate_group_availability(STUDENTS_PER_GROUP, availability_by_groups, xlsx_file, df_groups):
     """
