@@ -75,15 +75,19 @@ students_poll = students_poll[["Ime", "Prezime", "Broj indeksa"]]
 
 print("Broj studenata u prijavama: ", len(students_poll))
 students_poll = mutils.refactor_indexes(students_poll)
-students_poll = students_poll.drop_duplicates(subset="Broj indeksa")
+students_poll = students_poll.drop_duplicates(subset="Broj indeksa").reset_index(drop=True)
 print("Broj studenata u prijavama nakon izbacivanja duplikata: ", len(students_poll))
 
-students_poll = mutils.exclude_non_payers(students_in_complete, students_poll)
-print("Broj studenata u prijavama nakon izbacivanja neplatiša: ", len(students_poll))
-# print(students_poll)
-print()
+EXCLUDE_NON_PAYERS = False # TODO: Change to load from file that contains information about non-payers (Polaganje ispita kartica na nastavničkom servisu)
 
-students_poll['Način slušanja'] = students_poll['Broj indeksa'].map(students_in_complete.set_index('Broj indeksa')['Način slušanja'])
+if EXCLUDE_NON_PAYERS:
+    students_poll = mutils.exclude_non_payers(students_in_complete, students_poll)
+    print("Broj studenata u prijavama nakon izbacivanja neplatiša: ", len(students_poll))
+    print()
+
+students_poll['Način slušanja'] = students_poll['Broj indeksa'].map(
+    students_in_complete.set_index('Broj indeksa')['Način slušanja']
+).fillna('Ponovo sluša')
 mstats.student_status_stats(students_poll, poll=True)
 
 students_poll = mutils.remove_polled_students_already_in_group(students_in_groups, students_poll)
