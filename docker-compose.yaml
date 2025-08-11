@@ -1,0 +1,9 @@
+version: "3.9"
+services:
+    speesak:
+        build: .
+        container_name: speesak
+        volumes:
+            - ./xls:/app/xls
+            - ./schedules:/app/schedules
+            - ./additional-classrooms:/app/additional-classrooms
