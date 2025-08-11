@@ -2,7 +2,7 @@
 
 ## Opis programa
 
-Ovaj program je namenjen za upravljanje spiskovima studenata na Fakultetu tehničkih nauka. 
+Ovaj program je namenjen za upravljanje spiskovima studenata na Fakultetu tehničkih nauka.
 
 Program omogućava:
 
@@ -15,13 +15,14 @@ Program omogućava:
 ## Neophodni alati
 
 - Python 3
-    - pandas
-    - openpyxl
-- LibreOffice
+  - pandas
+  - openpyxl
+- LibreOffice // TODO change to gnumeric and ssconvert
 
 ## Uputstvo za korišćenje
 
 Neophodno je:
+
 1. Kreirati direktorijum `xls/` u kome će se nalaziti originalni spiskovi studenata
 2. Smestiti originalne spiskove studenata u direktorijum `xls/`, dobijene od strane studentske službe (nastavničkog servisa)
     - Imena spiskova je neophodno preimenovati u format:
@@ -34,7 +35,7 @@ Neophodno je:
 5. Pokrenuti program `main.py`
 6. Spiskovi studenata se generišu u direktorijumu `schedules/`, i to:
     - `regular_groups.xlsx` - raspored studenata po već postojećim grupama
-    - `additional_groups.xlsx` - raspored studenata po novim grupama    
+    - `additional_groups.xlsx` - raspored studenata po novim grupama
 
 ## Eventualne greške
 

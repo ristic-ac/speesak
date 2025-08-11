@@ -1,3 +1,4 @@
+import pandas as pd
 def refactor_indexes(df_poll):
     df_poll_index = df_poll['Broj indeksa']
     df_poll_index = df_poll_index.str.extract(r"([A-Za-z]{2})\s?(\d+)[\/-](\d+)")
@@ -7,6 +8,7 @@ def refactor_indexes(df_poll):
         print("Lookup regex and change it to match the format of 'Broj indeksa' in PRIJAVE.xlsx")
         exit(1)
 
+    df_poll_index[1] = df_poll_index[1].str.lstrip('0')  # Remove leading zeros
     df_poll['Broj indeksa'] = df_poll_index[0].str.upper() + " " + df_poll_index[1] + "/" + df_poll_index[2]
     df_poll = df_poll.drop_duplicates(subset="Broj indeksa")
     return df_poll
@@ -47,7 +49,7 @@ def prioritize_new_students(dfs):
 
 def find_group(availability_by_groups):
     for study_program, availability_groups in availability_by_groups:
-        for group, availability in availability_groups.iteritems():
+        for group, availability in availability_groups.items(): 
             if availability <= 0:
                 continue
             availability_groups[group] = availability - 1
@@ -61,7 +63,7 @@ def appoint_to_existing_groups(df_groups_combined, availability_by_groups, dfs, 
             if group is None:
                 print("No more groups available.")
                 break
-            df_groups_combined = df_groups_combined.append({"Grupa": group, "Broj indeksa": student["Broj indeksa"], "Prezime": student["Prezime"], "Ime": student["Ime"], "Smer": study_program}, ignore_index=True)
+            df_groups_combined = pd.concat([df_groups_combined, pd.DataFrame({"Grupa": [group], "Broj indeksa": [student["Broj indeksa"]], "Prezime": [student["Prezime"]], "Ime": [student["Ime"]], "Smer": [study_program]})], ignore_index=True)
             appointed_student_indexes.append(student["Broj indeksa"])
     return df_groups_combined
 

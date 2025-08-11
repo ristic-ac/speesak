@@ -24,6 +24,6 @@ def xlsx_to_array(xlsx_file):
 def xlsx_k_to_array(workbook_path):
     workbook_path = os.path.join("xlsx", workbook_path)
     df = pd.read_excel(workbook_path, sheet_name='dhtmlxGrid')
-    df = df[["Broj indeksa", "Prezime", "Ime", "Način slušanja"]]
+    df = df[["Broj indeksa", "Prezime", "Ime", "Način polaganja"]]
     print(df.columns)
     return df

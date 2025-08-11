@@ -7,7 +7,7 @@ mkdir -p xlsx
 
 # Convert all .xls files to .xlsx files using command such as libreoffice --convert-to xlsx my.xls --headless
 for file in xls/*.xls; do
-  libreoffice --convert-to xlsx --outdir xlsx "$file" --headless
+  ssconvert "$file" "xlsx/$(basename "$file" .xls).xlsx"
 done
 
 # Print message
