@@ -5,7 +5,7 @@
 **speesak** je alat namenjen za upravljanje spiskovima studenata na Fakultetu tehničkih nauka.  
 Omogućava jednostavno rukovanje podacima o studentima, raspoređivanje u grupe i generisanje rasporeda testova.
 
-### Funkcionalnosti
+### 🔍 Pregled funkcionalnosti
 
 - ✅ Konverzija spiskova studenata iz **.xls** u **.xlsx** format (uz pomoć skripte `convert.sh`)
 - ✅ Provera konzistentnosti spiskova studenata
@@ -15,7 +15,7 @@ Omogućava jednostavno rukovanje podacima o studentima, raspoređivanje u grupe 
 
 ---
 
-## 🛠 Neophodni alati
+## 🛠️ Neophodni alati
 
 - **Python 3**
   - `pandas`
@@ -101,7 +101,7 @@ Nakon izvršavanja, rezultati se nalaze u direktorijumu **`schedules/`**:
 
 ---
 
-### ⚠ Rešavanje mogućih grešaka
+### ⚠️ Rešavanje mogućih grešaka
 
 **Greška:**
 
