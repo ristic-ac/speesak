@@ -107,17 +107,15 @@ mutils.track_residual_students(dfs, appointed_student_indexes, residual_students
 no_students_after_first_appointing = len(students_in_groups)
 
 if no_students_after_first_appointing - no_students_before_first_appointing != len(appointed_student_indexes):
-    print("Error: Number of appointed students is not equal to difference between number of students before and after appointing.")
-    print("Check if students are appointed correctly.")
+    print("Greška: Broj raspoređenih studenata nije jednak razlici broja studenata pre i posle raspoređivanja.")
+    print("Proverite da li su studenti pravilno raspoređeni.")
     exit(1)
-
 
 students_in_groups["Grupa"] = students_in_groups["Grupa"].astype(int)
 
-students_in_groups = students_in_groups.sort_values(by=["Smer", "Grupa"])
+students_in_groups = students_in_groups.sort_values(["Smer", "Grupa"]).reset_index(drop=True)
 
 # Set control column "RB" and "RBG", these mean "Redni Broj" and "Redni Broj u Grupi" (control numbers)
-students_in_groups.reset_index(drop=True, inplace=True)
 students_in_groups['RB'] = students_in_groups.index + 1
 students_in_groups['RBG'] = students_in_groups.index % STUDENTS_PER_GROUP + 1
 
@@ -126,8 +124,7 @@ students_in_groups = students_in_groups[["RB", 'RBG', "Smer", "Grupa", "Broj ind
 students_in_groups.to_excel("schedules/regular_groups.xlsx", index=False)
 
 df_additional_classrooms = pd.read_csv("additional-classrooms/classrooms.csv")
-df_additional_classrooms = df_additional_classrooms.sort_values(by=["Termin", "Ucionica"], ascending=True)
-df_additional_classrooms.reset_index(drop=True, inplace=True)
+df_additional_classrooms = df_additional_classrooms.sort_values(["Termin", "Ucionica"]).reset_index(drop=True)
 print("Ucitao dodatne ucionice: ")
 print(df_additional_classrooms)
 
