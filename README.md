@@ -23,6 +23,7 @@ Program omogućava:
   - pandas
   - openpyxl
 - LibreOffice
+- Docker i Docker Compose (za pokretanje u kontejneru)
 
 ## Uputstvo za korišćenje
 
@@ -40,29 +41,29 @@ Neophodno je:
     - Imena spiskova je neophodno preimenovati u format:
         - `XX.xls`, gde je XX oznaka smera propisana od strane fakulteta (RA, PSI, IN, ...) za spiskove po grupama
         - `XXK.xls`, gde je XX oznaka smera, za kompletne spiskove studenata, to jest spiskove iz kartice "Polaganje ispita" u okviru nastavničkog servisa
-4. Pokrenuti program `convert.sh` kako bi se svi spiskovi prebacili u format .xlsx
-5. U folderu `xlsx/` će se nalaziti konvertovani spiskovi studenata u formatu .xlsx, koji su potrebni za dalju obradu. Neophodno je i smestiti datoteku:
+4. U folderu `xlsx/` će se nalaziti konvertovani spiskovi studenata u formatu .xlsx, koji su potrebni za dalju obradu. Neophodno je kreirati direktorijum i smestiti datoteku:
     - `PRIJAVE.xlsx` - spisak studenata koji su se prijavili za kolokvijum na formi, sa kolonama:
         - Ime
         - Prezime
         - Smer
         - Broj upisa
         - Godina upisa
-6. Za dodatne termine neophodno je u datoteci `classrooms.csv` u okviru `additional-classrooms/` direktorijuma dodati učionice u kojima će se testovi održati sa kolonama:
+5. Za dodatne termine neophodno je u datoteci `classrooms.csv` u okviru `additional-classrooms/` direktorijuma dodati učionice u kojima će se testovi održati sa kolonama:
     - Ucionica
     - Termin
-7. Kreirati Python virtuelno okruženje i instalirati potrebne biblioteke:
+    Postoji primer datoteke `classrooms.csv` u okviru `additional-classrooms/` direktorijuma. Softver automatski zna da se u Mašinskom institutu testovi održavaju u učionicama od 32, a u NTP-u u učionicama od 16 mesta.
+6. Potrebno je da imate instaliran Docker i Docker Compose. Pokrenite sledeću komandu iz root direktorijuma projekta:
 
     ```bash
-    python3 -m venv venv
-    source venv/bin/activate
-    pip install -r requirements.txt
+    docker compose up --build
     ```
 
-8. Pokrenuti program `main.py`
-9. Spiskovi studenata se generišu u direktorijumu `schedules/`, i to:
-    - `regular_groups.xlsx` - raspored studenata po već postojećim grupama
-    - `additional_groups.xlsx` - raspored studenata po novim grupama
+    Ova komanda će izgraditi i pokrenuti kontejner sa svim potrebnim zavisnostima.
+
+7. Program `main.py` se pokreće automatski unutar Docker kontejnera.
+8. Rezultati obrade (spiskovi studenata) se nalaze u direktorijumu `schedules/`:
+    - `regular_groups.xlsx` – raspored studenata po postojećim grupama
+    - `additional_groups.xlsx` – raspored studenata po novim grupama
 
 ## Eventualne greške
 
