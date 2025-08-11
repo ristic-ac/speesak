@@ -59,8 +59,8 @@ Neophodno je:
     pip install -r requirements.txt
     ```
 
-7. Pokrenuti program `main.py`
-8. Spiskovi studenata se generišu u direktorijumu `schedules/`, i to:
+8. Pokrenuti program `main.py`
+9. Spiskovi studenata se generišu u direktorijumu `schedules/`, i to:
     - `regular_groups.xlsx` - raspored studenata po već postojećim grupama
     - `additional_groups.xlsx` - raspored studenata po novim grupama
 
