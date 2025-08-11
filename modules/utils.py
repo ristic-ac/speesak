@@ -1,7 +1,28 @@
 import pandas as pd
 
-# Funkcija za refaktorisanje indeksa u DataFrame-u (ukoliko se koriste odvojeni text-boxovi na anketi ovo je maltene nepotrebno koristiti)
 def refactor_indexes(df_poll):
+    """
+    Refaktoriše kolonu 'Broj indeksa' u datom DataFrame-u u standardizovani format.
+
+    Ova funkcija izdvaja i preformatira brojeve indeksa iz kolone 'Broj indeksa',
+    očekujući da odgovaraju obrascu: dva slova, opciono razmak, cifre, '/', ili '-', i još cifara.
+    Preformatirani indeks će biti u obliku 'AA NNNN/YY', gde:
+        - 'AA' su velika slova,
+        - 'NNNN' su cifre (broj indeksa),
+        - 'YY' su cifre (godina).
+
+    Ako broj izvučenih redova ne odgovara ulaznom DataFrame-u, funkcija ispisuje grešku
+    i prekida program.
+
+    Argumenti:
+        df_poll (pd.DataFrame): DataFrame koji sadrži kolonu 'Broj indeksa' sa brojevima indeksa za preformatiranje.
+
+    Povratna vrednost:
+        pd.DataFrame: Ulazni DataFrame sa preformatiranom kolonom 'Broj indeksa'.
+
+    Izuzeci:
+        SystemExit: Ako broj izvučenih redova nije jednak broju redova u ulaznom DataFrame-u.
+    """
     df_poll_index = df_poll['Broj indeksa']
     df_poll_index = df_poll_index.str.extract(r"([A-Za-z]{2})\s?(\d+)[\/-](\d+)")
 
@@ -13,8 +34,20 @@ def refactor_indexes(df_poll):
     df_poll['Broj indeksa'] = df_poll_index[0].str.upper() + " " + df_poll_index[1] + "/" + df_poll_index[2]
     return df_poll
 
-# Funkcija za izbacivanje studenata koji nisu platili
 def exclude_non_payers(df_complete_combined, df_poll):
+    """
+    Uklanja studente iz DataFrame-a prijava koji nisu prisutni u kompletnom kombinovanom DataFrame-u (tj. one koji nisu platili).
+
+    Argumenti:
+        df_complete_combined (pd.DataFrame): DataFrame koji sadrži kompletnu listu studenata (npr. onih koji su platili).
+        df_poll (pd.DataFrame): DataFrame koji sadrži listu studenata koji su se prijavili (npr. za ispit).
+
+    Povratna vrednost:
+        pd.DataFrame: Filtrirani df_poll DataFrame koji sadrži samo studente koji su prisutni u df_complete_combined.
+
+    Sporedni efekti:
+        Ispisuje broj i detalje studenata iz df_poll koji nisu prisutni u df_complete_combined.
+    """
     df_poll_not_in_complete = df_poll[~df_poll['Broj indeksa'].isin(df_complete_combined['Broj indeksa'])]
     print("Broj studenata u prijavama koji nisu u kompletnoj listi (nisu platili): ", len(df_poll_not_in_complete)) # TODO: Check if missing from complete are non-payers
     if not df_poll_not_in_complete.empty:
@@ -25,15 +58,40 @@ def exclude_non_payers(df_complete_combined, df_poll):
     df_poll = df_poll.reset_index(drop=True)
     return df_poll
 
-# Funkcija za izračunavanje dostupnosti grupa (koliko praznih mesta ima u grupama)
 def calculate_group_availability(STUDENTS_PER_GROUP, availability_by_groups, xlsx_file, df_groups):
+    """
+    Izračunava preostalu dostupnost za svaku grupu i dodaje rezultat u prosleđenu listu.
+
+    Argumenti:
+        STUDENTS_PER_GROUP (int): Maksimalan broj studenata dozvoljen po grupi.
+        availability_by_groups (list): Lista kojoj se dodaje izračunata dostupnost po grupama.
+        xlsx_file (str): Naziv Excel fajla, koristi se za izdvajanje identifikatora studijskog programa.
+        df_groups (pandas.DataFrame): DataFrame koji sadrži raspodelu po grupama sa kolonom "Grupa".
+
+    Povratna vrednost:
+        None: Funkcija rezultate dodaje direktno u availability_by_groups listu.
+
+    Sporedni efekti:
+        Menja availability_by_groups listu dodavanjem torka koji sadrži identifikator studijskog programa i Series sa dostupnošću po grupama.
+    """
     df_group_stats = df_groups.groupby("Grupa").size().sort_index()
     df_group_stats = STUDENTS_PER_GROUP - df_group_stats
     study_program = xlsx_file[:2]
     availability_by_groups.append((study_program, df_group_stats))
 
-# Funkcija za uklanjanje studenata koji su već u grupama a prijavili se na anketi
 def remove_polled_students_already_in_group(df_groups_combined, df_poll):
+    """
+    Uklanja studente iz DataFrame-a prijava koji su već prisutni u DataFrame-u grupa.
+
+    Ova funkcija proverava koji studenti iz `df_poll` (DataFrame prijava) su već uključeni u `df_groups_combined` (DataFrame grupa) na osnovu kolone 'Broj indeksa'. Ispisuje broj i detalje takvih studenata, a zatim vraća filtriranu verziju `df_poll` bez tih studenata.
+
+    Argumenti:
+        df_groups_combined (pd.DataFrame): DataFrame koji sadrži studente već raspoređene u grupe, sa kolonom 'Broj indeksa'.
+        df_poll (pd.DataFrame): DataFrame koji sadrži studente koji su se prijavili, sa kolonom 'Broj indeksa'.
+
+    Povratna vrednost:
+        pd.DataFrame: Filtrirani DataFrame koji sadrži samo studente iz `df_poll` koji nisu već u `df_groups_combined`.
+    """
     df_poll_in_groups = df_poll[df_poll['Broj indeksa'].isin(df_groups_combined['Broj indeksa'])].reset_index(drop=True)
     print("Broj studenata u prijavama koji su već u grupama: ", len(df_poll_in_groups))
     if not df_poll_in_groups.empty:
@@ -43,16 +101,41 @@ def remove_polled_students_already_in_group(df_groups_combined, df_poll):
     df_poll = df_poll[~df_poll['Broj indeksa'].isin(df_poll_in_groups['Broj indeksa'])] # 
     return df_poll
 
-# Funkcija za prioritizaciju studenata koji prvi put slušaju predmet
 def prioritize_new_students(dfs):
+    """
+    Preraspoređuje listu tako da prvi podspisak odgovara studentima koji prvi put slušaju predmet.
+
+    Argumenti:
+        dfs (list of list): Lista gde je svaki element podlista koja predstavlja zapis o studentu.
+            Prvi element svake podliste treba da bude string koji označava status studenta.
+
+    Povratna vrednost:
+        list of list: Preraspoređena lista sa podlistom za nove studente (gde je prvi element
+            'Prvi put sluša (Unapred slušanje)') pomerenom na početak. Ako takva podlista ne postoji,
+            lista se vraća neizmenjena.
+    """
     for i in range(len(dfs)):
         if dfs[i][0] == 'Prvi put sluša (Unapred slušanje)':
             dfs[0], dfs[i] = dfs[i], dfs[0]
             break
     return dfs
 
-# Funkcija za pronalaženje grupe sa slobodnim mestom
 def find_group(availability_by_groups):
+    """
+    Pronalazi i rezerviše dostupnu grupu iz kolekcije studijskih programa i njihovih dostupnosti po grupama.
+
+    Iterira kroz prosleđenu mapu dostupnosti, tražeći prvu grupu sa dostupnošću većom od nule.
+    Ako se takva grupa pronađe, smanjuje njenu dostupnost za jedan i vraća odgovarajući studijski program i grupu.
+    Ako nema dostupnih grupa, vraća (None, None).
+
+    Argumenti:
+        availability_by_groups (Iterable[Tuple[Any, Dict[Any, int]]]): 
+            Iterabilna kolekcija torki, gde svaka torka sadrži studijski program i rečnik koji mapira identifikatore grupa na broj preostalih mesta.
+
+    Povratna vrednost:
+        Tuple[Any, Any]: 
+            Torka koja sadrži studijski program i identifikator prve pronađene dostupne grupe, ili (None, None) ako nema dostupnih grupa.
+    """
     for study_program, availability_groups in availability_by_groups:
         for group, availability in availability_groups.items():
             if availability <= 0:
@@ -61,8 +144,23 @@ def find_group(availability_by_groups):
             return study_program, group
     return None, None
 
-# Funkcija za dodeljivanje studenata postojećim grupama
 def appoint_to_existing_groups(df_groups_combined, availability_by_groups, dfs, appointed_student_indexes):
+    """
+    Dodeljuje studente postojećim grupama na osnovu dostupnosti i ažurira objedinjeni DataFrame grupa.
+
+    Argumenti:
+        df_groups_combined (pd.DataFrame): DataFrame sa svim trenutno raspoređenim studentima i njihovim grupama.
+        availability_by_groups (list): Lista torki gde svaka torka sadrži identifikator studijskog programa i dostupnost po grupama.
+        dfs (list of tuples): Lista torki gde svaka torka sadrži status i DataFrame studenata za dodelu.
+        appointed_student_indexes (list): Lista u koju se dodaju brojevi indeksa studenata koji su dodeljeni grupama.
+
+    Povratna vrednost:
+        pd.DataFrame: Ažurirani DataFrame sa novododeljenim studentima u odgovarajuće grupe.
+
+    Sporedni efekti:
+        Menja listu appointed_student_indexes dodavanjem brojeva indeksa dodeljenih studenata.
+        Ispisuje poruku ako nema više dostupnih grupa za dodelu.
+    """
     for status, students in dfs:
         for index, student in students.iterrows():
             study_program, group = find_group(availability_by_groups)
@@ -74,15 +172,44 @@ def appoint_to_existing_groups(df_groups_combined, availability_by_groups, dfs, 
             appointed_student_indexes.append(student["Broj indeksa"])
     return df_groups_combined
 
-# Funkcija za praćenje preostalih studenata koji nisu dodeljeni
 def track_residual_students(dfs, appointed_student_indexes, residual_students):
+    """
+    Prati i dodaje studente koji nisu dodeljeni u listu preostalih studenata (residual_students).
+
+    Argumenti:
+        dfs (list of tuple): Lista gde je svaki element torka koja sadrži status i pandas DataFrame studenata.
+        appointed_student_indexes (set ili list): Kolekcija brojeva indeksa studenata koji su već dodeljeni.
+        residual_students (list): Lista u koju će biti dodati studenti koji nisu u appointed_student_indexes.
+
+    Povratna vrednost:
+        None: Funkcija menja listu residual_students na mestu.
+    """
     for status, students in dfs:
         for index, student in students.iterrows():
             if student["Broj indeksa"] not in appointed_student_indexes:
                 residual_students.append(student)
 
-# Funkcija za dodeljivanje preostalih studenata u dodatne učionice
 def appoint_residual_students(df_additional_classrooms, df_residual_students, additional_students_appointed, additional_students_to_appoint):
+    """
+    Dodeljuje preostale studente dodatnim učionicama na osnovu raspoloživog kapaciteta.
+
+    Ova funkcija prolazi kroz prosleđeni DataFrame dodatnih učionica i dodeljuje studente iz DataFrame-a preostalih studenata tim učionicama, ažurirajući njihove podatke o učionici, terminu i broju grupe. Dodeljivanje traje dok se ne dodeli zadati broj dodatnih studenata ili dok se ne popune sva dostupna mesta.
+
+    Argumenti:
+        df_additional_classrooms (pd.DataFrame): DataFrame sa informacijama o dodatnim učionicama, sa kolonama "Ucionica" i "Termin".
+        df_residual_students (pd.DataFrame): DataFrame studenata koji treba da budu dodeljeni; ažurira se na mestu sa podacima o učionici, terminu i broju grupe.
+        additional_students_appointed (int): Trenutni broj već dodeljenih studenata.
+        additional_students_to_appoint (int): Ukupan broj studenata koji treba da budu dodeljeni.
+
+    Povratna vrednost:
+        int: Ažuriran broj dodeljenih studenata nakon procesa dodele.
+
+    Napomene:
+        - Učionice koje počinju sa "MI" imaju kapacitet od 32 studenta.
+        - Učionice koje počinju sa "NTP" imaju kapacitet od 16 studenata.
+        - Funkcija ažurira kolone 'Ucionica', 'Termin' i 'RBG' u df_residual_students za svakog dodeljenog studenta.
+        - Ako su svi studenti dodeljeni pre nego što se popune sva mesta, funkcija ispisuje poruku i vraća se ranije.
+    """
     BROJ_MI = 32
     BROJ_NTP = 16
     for index, row in df_additional_classrooms.iterrows():
