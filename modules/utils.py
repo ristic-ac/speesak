@@ -36,34 +36,64 @@ def refactor_indexes(df_poll):
 
 def exclude_non_payers(df_complete_combined, df_poll):
     """
-    Uklanja studente iz DataFrame-a prijava koji nisu prisutni u kompletnom kombinovanom DataFrame-u (tj. one koji nisu platili).
+    Uklanja studente iz DataFrame-a prijava koji nisu prisutni u kompletnom kombinovanom DataFrame-u,
+    čiji 'Način polaganja' nije jedan od dozvoljenih, ili čiji 'Studijski program/modul' je 'Nije upisao tekuću školsku godinu'.
 
-    UPOZORENJE: Ova funkcija trenutno nije ispravna i ne treba je koristiti dok se ne doradi!
+    Dozvoljeni 'Način polaganja':
+        - 'Polaže preko kolokvijuma'
+        - 'Prvi put sluša (Redovno)'
+        - 'Ponovo sluša'
+        - 'Prvi put sluša (Unapred slušanje)'
 
     Argumenti:
-        df_complete_combined (pd.DataFrame): DataFrame koji sadrži kompletnu listu studenata (npr. onih koji su platili).
-        df_poll (pd.DataFrame): DataFrame koji sadrži listu studenata koji su se prijavili (npr. za ispit).
+        df_complete_combined (pd.DataFrame): DataFrame sa kompletnom listom studenata.
+        df_poll (pd.DataFrame): DataFrame sa prijavljenim studentima.
 
     Povratna vrednost:
-        pd.DataFrame: Filtrirani df_poll DataFrame koji sadrži samo studente koji su prisutni u df_complete_combined.
+        pd.DataFrame: Filtrirani df_poll sa samo validnim studentima.
 
     Sporedni efekti:
-        Ispisuje broj i detalje studenata iz df_poll koji nisu prisutni u df_complete_combined.
+        Ispisuje broj i detalje studenata iz df_poll koji su isključeni, sa razlogom isključenja.
     """
-    import warnings
-    warnings.warn("exclude_non_payers se ne koristi, jer se treba doraditi, nije dobro trenutno kako radi.", UserWarning)
-    raise NotImplementedError("exclude_non_payers se ne koristi, jer se treba doraditi, nije dobro trenutno kako radi.")
+    allowed_nacin = [
+        'Polaže preko kolokvijuma',
+        'Prvi put sluša (Redovno)',
+        'Ponovo sluša',
+        'Prvi put sluša (Unapred slušanje)'
+    ]
+    # Mapiranje indeksa na način polaganja i studijski program/modul
+    nacin_map = df_complete_combined.set_index('Broj indeksa')['Način polaganja'].to_dict()
+    program_map = df_complete_combined.set_index('Broj indeksa')['Studijski program/modul'].to_dict()
 
-    # Sledeći kod je ostavljen za referencu, ali se ne izvršava dok se funkcija ne doradi:
-    # df_poll_not_in_complete = df_poll[~df_poll['Broj indeksa'].isin(df_complete_combined['Broj indeksa'])]
-    # print("Broj studenata u prijavama koji nisu u kompletnoj listi (nisu platili): ", len(df_poll_not_in_complete)) # TODO: Check if missing from complete are non-payers
-    # if not df_poll_not_in_complete.empty:
-    #     print("Studenti u prijavama koji nisu u kompletnoj listi: ")
-    #     print(df_poll_not_in_complete)
-    # print()
-    # df_poll = df_poll[~df_poll['Broj indeksa'].isin(df_poll_not_in_complete['Broj indeksa'])]
-    # df_poll = df_poll.reset_index(drop=True)
-    # return df_poll
+    reasons = []
+    mask = []
+
+    for idx, row in df_poll.iterrows():
+        broj_indeksa = row['Broj indeksa']
+        nacin = nacin_map.get(broj_indeksa, None)
+        program = program_map.get(broj_indeksa, None)
+        if nacin is None or program is None:
+            reasons.append("Nije pronađen u kompletnoj listi")
+            mask.append(False)
+        elif nacin not in allowed_nacin:
+            reasons.append(f"Neodgovarajući Način polaganja: {nacin}")
+            mask.append(False)
+        elif program == 'Nije upisao tekuću školsku godinu':
+            reasons.append("Nije upisao tekuću školsku godinu")
+            mask.append(False)
+        else:
+            reasons.append("")
+            mask.append(True)
+
+    df_poll = df_poll.copy()
+    df_poll['Razlog isključenja'] = reasons
+    df_excluded = df_poll[~pd.Series(mask)]
+    print("Broj studenata u prijavama koji nisu u kompletnoj listi ili imaju neodgovarajući Način polaganja ili nisu upisali tekuću godinu: ", len(df_excluded))
+    if not df_excluded.empty:
+        print("Studenti u prijavama koji su isključeni sa razlogom: ")
+        print(df_excluded[['Broj indeksa', 'Prezime', 'Ime', 'Razlog isključenja']])
+    print()
+    return df_poll[pd.Series(mask)].reset_index(drop=True)
 
 def calculate_group_availability(STUDENTS_PER_GROUP, availability_by_groups, xlsx_file, df_groups):
     """

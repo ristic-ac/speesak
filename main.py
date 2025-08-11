@@ -22,23 +22,28 @@ students_in_complete = pd.DataFrame()
 
 classroom_availability_by_groups = []
 
+missing_students = []
+
 for xlsx_file_name, xlsx_k_file_name in xlsx_files:
     students_groups = mxlsx.convert_xlsx_groups_to_dataframe(xlsx_file_name)
     students_complete = mxlsx.convert_xlsx_complete_to_dataframe(xlsx_k_file_name)
 
     mutils.calculate_group_availability(STUDENTS_PER_GROUP, classroom_availability_by_groups, xlsx_file_name, students_groups)
 
-    # We incrementaly add data to dataframes
+    # We incrementally add data to dataframes
     students_in_groups = pd.concat([students_in_groups, students_groups], ignore_index=True)
     students_in_complete = pd.concat([students_in_complete, students_complete], ignore_index=True)
 
     # Check if students in groups are also in complete list
     students_in_groups_missing_from_complete = students_groups[~students_groups['Broj indeksa'].isin(students_complete['Broj indeksa'])]
     if not students_in_groups_missing_from_complete.empty:
-        print("Studenti koji su u grupama, a nisu u kompletnom spisku: ")
-        print(students_in_groups_missing_from_complete)
-        exit(1)
+        missing_students.append(students_in_groups_missing_from_complete)
 
+if missing_students:
+    print("Studenti koji su u grupama, a nisu u kompletnom spisku: ")
+    for df in missing_students:
+        print(df)
+print()
 # Drop "Redni broj" column from df_groups_combined
 students_in_groups = students_in_groups.drop(columns="Redni_broj")
 
@@ -78,22 +83,22 @@ students_poll = mutils.refactor_indexes(students_poll)
 students_poll = students_poll.drop_duplicates(subset="Broj indeksa").reset_index(drop=True)
 print("Broj studenata u prijavama nakon izbacivanja duplikata: ", len(students_poll))
 
-EXCLUDE_NON_PAYERS = False # TODO: Change to load from file that contains information about non-payers (Polaganje ispita kartica na nastavničkom servisu)
+EXCLUDE_NON_PAYERS = False
 
 if EXCLUDE_NON_PAYERS:
     students_poll = mutils.exclude_non_payers(students_in_complete, students_poll)
     print("Broj studenata u prijavama nakon izbacivanja neplatiša: ", len(students_poll))
     print()
 
-students_poll['Način slušanja'] = students_poll['Broj indeksa'].map(
-    students_in_complete.set_index('Broj indeksa')['Način slušanja']
+students_poll['Način polaganja'] = students_poll['Broj indeksa'].map(
+    students_in_complete.drop_duplicates(subset='Broj indeksa').set_index('Broj indeksa')['Način polaganja']
 ).fillna('Ponovo sluša')
 mstats.student_status_stats(students_poll, poll=True)
 
 students_poll = mutils.remove_polled_students_already_in_group(students_in_groups, students_poll)
 grouped = mstats.student_status_stats(students_poll, poll=True)
 
-dfs = [(status,students) for status, students in students_poll.groupby('Način slušanja')]
+dfs = [(status,students) for status, students in students_poll.groupby('Način polaganja')]
 dfs = mutils.prioritize_new_students(dfs)
 
 appointed_student_indexes = []

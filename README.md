@@ -1,10 +1,5 @@
 # speesak
 
-## TODO
-
-- Objediniti sa spiskovima iz kartice "Polaganje ispita" u okviru nastavničkog servisa, kako bi se dobio spisak gde su informacije o plaćanju i načinu slušanja.
-- Saznati koje vrednosti polja označavaju da student nema pravo na polaganje preko kolokvijuma, kako bi se isključili iz spiska.
-
 ## Opis programa
 
 Ovaj program je namenjen za upravljanje spiskovima studenata na Fakultetu tehničkih nauka.
@@ -40,7 +35,7 @@ Neophodno je:
 3. Smestiti originalne spiskove studenata u direktorijum `xls/`, dobijene od strane studentske službe (nastavničkog servisa)
     - Imena spiskova je neophodno preimenovati u format:
         - `XX.xls`, gde je XX oznaka smera propisana od strane fakulteta (RA, PSI, IN, ...) za spiskove po grupama
-        - `XXK.xls`, gde je XX oznaka smera, za kompletne spiskove studenata, to jest spiskove iz kartice "Polaganje ispita" u okviru nastavničkog servisa
+        - `XXK.xls`, gde je XX oznaka smera, za kompletne spiskove studenata, to jest, spiskove iz kartice "Polaganje ispita" u okviru nastavničkog servisa
 4. U folderu `xlsx/` će se nalaziti konvertovani spiskovi studenata u formatu .xlsx, koji su potrebni za dalju obradu. Neophodno je kreirati direktorijum i smestiti datoteku:
     - `PRIJAVE.xlsx` - spisak studenata koji su se prijavili za kolokvijum na formi, sa kolonama:
         - Ime

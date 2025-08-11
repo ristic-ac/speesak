@@ -42,7 +42,7 @@ def convert_xlsx_complete_to_dataframe(workbook_path):
         workbook_path (str): Naziv XLSX fajla koji se nalazi u poddirektorijumu 'xlsx'.
 
     Povratna vrednost:
-        pandas.DataFrame: DataFrame sa kolonama 'Broj indeksa', 'Prezime', 'Ime' i 'Način slušanja' iz radnog lista 'dhtmlxGrid'.
+        pandas.DataFrame: DataFrame sa kolonama 'Broj indeksa', 'Prezime', 'Ime' i 'Način polaganja' iz radnog lista 'dhtmlxGrid'.
 
     Izuzeci:
         FileNotFoundError: Ako navedeni XLSX fajl ne postoji.
@@ -51,5 +51,5 @@ def convert_xlsx_complete_to_dataframe(workbook_path):
     """
     workbook_path = os.path.join("xlsx", workbook_path)
     df = pd.read_excel(workbook_path, sheet_name='dhtmlxGrid')
-    df = df[["Broj indeksa", "Prezime", "Ime", "Način slušanja"]]
+    df = df[["Broj indeksa", "Prezime", "Ime", "Način polaganja", "Studijski program/modul"]]
     return df
