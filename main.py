@@ -4,6 +4,9 @@ import modules.os as mos
 import modules.stats as mstats
 import modules.utils as mutils
 import pandas as pd
+import sys
+import os
+from dotenv import load_dotenv
 
 STUDENTS_PER_GROUP = 16
 
@@ -68,38 +71,107 @@ total_available_places = sum(df_group_stats.sum() for _, df_group_stats in class
 print(total_available_places)
 print()
 
-# Load data from xlsx/PRIJAVE.xlsx
-students_poll = pd.read_excel("xlsx/PRIJAVE.xlsx")
-students_poll = students_poll[["Ime", "Prezime", "Smer", "Broj upisa", "Godina upisa"]].copy()
-students_poll["Broj indeksa"] = (
-    students_poll["Smer"] + " " +
-    students_poll["Broj upisa"].astype(str) + "/" +
-    students_poll["Godina upisa"].astype(str)
-)
-students_poll = students_poll[["Ime", "Prezime", "Broj indeksa"]]
+# Determine which PRIJAVE file(s) to load based on .env variable or command-line argument
 
-print("Broj studenata u prijavama: ", len(students_poll))
-students_poll = mutils.refactor_indexes(students_poll)
-students_poll = students_poll.drop_duplicates(subset="Broj indeksa").reset_index(drop=True)
-print("Broj studenata u prijavama nakon izbacivanja duplikata: ", len(students_poll))
+load_dotenv()
+provera = os.getenv("PROVERA", "").lower()
+
+if provera == "domaci":
+    prijave_filenames = ["xlsx/PRIJAVE-SOV.xlsx", "xlsx/PRIJAVE-DOMACI.xlsx"]
+elif provera == "t1234":
+    prijave_filenames = ["xlsx/PRIJAVE-T1234.xlsx"]
+else:
+    # Exit with error if provera is not set correctly
+    print("Greška: Nije postavljen ili je neispravan parametar PROVERA. Dozvoljeni parametri su: t1234, domaci")
+    sys.exit(1)
+
+# Rename variables for clarity
+students_to_appoint = pd.DataFrame()   # Students who are to be appointed to groups
+students_to_exclude = pd.DataFrame()   # Students who are to be excluded from further processing
+
+# If domaci mode
+if len(prijave_filenames) == 2 and provera == "domaci":
+    students_poll_sov = pd.read_excel(prijave_filenames[0])
+    students_poll_sov = students_poll_sov[["Ime", "Prezime", "Smer", "Broj upisa", "Godina upisa"]].copy()
+    students_poll_sov["Broj indeksa"] = (
+        students_poll_sov["Smer"] + " " +
+        students_poll_sov["Broj upisa"].astype(str) + "/" +
+        students_poll_sov["Godina upisa"].astype(str)
+    )
+    students_poll_sov = students_poll_sov[["Ime", "Prezime", "Broj indeksa"]]
+
+    students_poll_domaci = pd.read_excel(prijave_filenames[1])
+    students_poll_domaci = students_poll_domaci[["Ime", "Prezime", "Smer", "Broj upisa", "Godina upisa"]].copy()
+    students_poll_domaci["Broj indeksa"] = (
+        students_poll_domaci["Smer"] + " " +
+        students_poll_domaci["Broj upisa"].astype(str) + "/" +
+        students_poll_domaci["Godina upisa"].astype(str)
+    )
+    students_poll_domaci = students_poll_domaci[["Ime", "Prezime", "Broj indeksa"]]
+
+    # Exclude students from domaci, include only sov
+    students_to_appoint = students_poll_sov
+    students_to_exclude = students_poll_domaci
+# If T1234 mode
+elif len(prijave_filenames) == 1 and provera == "t1234":
+    students_poll_t1234 = pd.read_excel(prijave_filenames[0])
+    students_poll_t1234 = students_poll_t1234[["Ime", "Prezime", "Smer", "Broj upisa", "Godina upisa"]].copy()
+    students_poll_t1234["Broj indeksa"] = (
+        students_poll_t1234["Smer"] + " " +
+        students_poll_t1234["Broj upisa"].astype(str) + "/" +
+        students_poll_t1234["Godina upisa"].astype(str)
+    )
+    students_to_appoint = students_poll_t1234[["Ime", "Prezime", "Broj indeksa"]]
+else:
+    exit("Nepoznat parametar. Dozvoljeni parametri su: t1234, domaci")
+
+print("Broj studenata u prijavama za izradu u učionicama: ", len(students_to_appoint))
+students_to_appoint = mutils.refactor_indexes(students_to_appoint)
+students_to_appoint = students_to_appoint.drop_duplicates(subset="Broj indeksa").reset_index(drop=True)
+print("Broj studenata u prijavama nakon izbacivanja duplikata: ", len(students_to_appoint))
+
+# If domaci mode, do the same for students_to_exclude
+if len(prijave_filenames) == 2 and provera == "domaci":
+    students_to_exclude = mutils.refactor_indexes(students_to_exclude)
+    students_to_exclude = students_to_exclude.drop_duplicates(subset="Broj indeksa").reset_index(drop=True)
+    print("Broj studenata koji se izuzimaju iz prijava: ", len(students_to_exclude))
 
 EXCLUDE_NON_PAYERS = False
 
 if EXCLUDE_NON_PAYERS:
-    students_poll = mutils.exclude_non_payers(students_in_complete, students_poll)
-    print("Broj studenata u prijavama nakon izbacivanja neplatiša: ", len(students_poll))
+    students_to_appoint = mutils.exclude_non_payers(students_in_complete, students_to_appoint)
+    print("Broj studenata u prijavama nakon izbacivanja neplatiša: ", len(students_to_appoint))
     print()
 
-students_poll['Način polaganja'] = students_poll['Broj indeksa'].map(
+students_to_appoint['Način polaganja'] = students_to_appoint['Broj indeksa'].map(
     students_in_complete.drop_duplicates(subset='Broj indeksa').set_index('Broj indeksa')['Način polaganja']
 ).fillna('Ponovo sluša')
-mstats.student_status_stats(students_poll, poll=True)
+mstats.student_status_stats(students_to_appoint, poll=True)
 
-students_poll = mutils.remove_polled_students_already_in_group(students_in_groups, students_poll)
-grouped = mstats.student_status_stats(students_poll, poll=True)
+students_to_appoint = mutils.remove_polled_students_already_in_group(students_in_groups, students_to_appoint)
+grouped = mstats.student_status_stats(students_to_appoint, poll=True)
 
-dfs = [(status,students) for status, students in students_poll.groupby('Način polaganja')]
+dfs = [(status,students) for status, students in students_to_appoint.groupby('Način polaganja')]
 dfs = mutils.prioritize_new_students(dfs)
+
+# If domaci mode, exclude students_to_exclude from students_in_groups and students_to_appoint
+if len(prijave_filenames) == 2 and provera == "domaci":
+    students_in_groups = students_in_groups[~students_in_groups['Broj indeksa'].isin(students_to_exclude['Broj indeksa'])]
+    students_to_appoint = students_to_appoint[~students_to_appoint['Broj indeksa'].isin(students_to_exclude['Broj indeksa'])]
+    print("Broj studenata u grupama nakon izbacivanja izuzetih: ", len(students_in_groups))
+    print("Broj studenata u prijavama nakon izbacivanja izuzetih: ", len(students_to_appoint))
+    # Reset classroom_availability_by_groups
+    classroom_availability_by_groups = []
+    # Calculate group stats after exclusion, each group should have 16 places in total, calculate from students_in_groups column "Grupa"
+    mutils.calculate_group_availability(STUDENTS_PER_GROUP, classroom_availability_by_groups, None, students_in_groups)
+    print("Broj grupa po smerovima nakon izbacivanja izuzetih: ")
+    for smer, group_stats in classroom_availability_by_groups:
+        nonzero_groups = group_stats[group_stats > 0]
+        if not nonzero_groups.empty:
+            print(f"Smer: {smer}")
+            for grupa, slobodna_mesta in nonzero_groups.items():
+                print(f"  Grupa {grupa}: {slobodna_mesta} slobodnih mesta")
+    print("=============================")
 
 appointed_student_indexes = []
 no_students_before_first_appointing = len(students_in_groups)
@@ -126,7 +198,17 @@ students_in_groups['RBG'] = students_in_groups.index % STUDENTS_PER_GROUP + 1
 
 students_in_groups = students_in_groups[["RB", 'RBG', "Smer", "Grupa", "Broj indeksa", "Prezime", "Ime"]]
 
-students_in_groups.to_excel("schedules/regular_groups.xlsx", index=False)
+# Create domaci and t1234 folders if they do not exist
+os.makedirs("schedules/domaci", exist_ok=True)
+os.makedirs("schedules/t1234", exist_ok=True)
+
+# Save students_in_groups to the appropriate file based on the mode
+if len(prijave_filenames) == 2 and provera == "domaci":
+    out_path = "schedules/domaci/regular_groups.xlsx"
+else:
+    out_path = "schedules/t1234/regular_groups.xlsx"
+
+students_in_groups.to_excel(out_path, index=False)
 
 df_additional_classrooms = pd.read_csv("additional-classrooms/classrooms.csv")
 df_additional_classrooms = df_additional_classrooms.sort_values(["Termin", "Ucionica"]).reset_index(drop=True)
@@ -152,14 +234,19 @@ if additional_students_appointed != additional_students_to_appoint:
     print("Proverite da li su studenti pravilno raspoređeni.")
     exit(1)
 
-# Set control column "RB"
-df_residual_students["RB"] = df_residual_students.index + 1
+# Only export if there are any additionally appointed students
+if not df_residual_students.empty:
+    # Set control column "RB"
+    df_residual_students["RB"] = df_residual_students.index + 1
 
-# Convert RBG column to int
-df_residual_students["RBG"] = df_residual_students["RBG"].astype(int)
+    # Convert RBG column to int
+    df_residual_students["RBG"] = df_residual_students["RBG"].astype(int)
 
-# Change order of columns in df_residual_students to: "RB", "RBG", "Termin", "Ucionica", "Broj indeksa", "Prezime", "Ime"
-df_residual_students = df_residual_students[["RB", "RBG", "Termin", "Ucionica", "Broj indeksa", "Prezime", "Ime"]]
+    # Change order of columns 
+    df_residual_students = df_residual_students[["RB", "RBG", "Termin", "Ucionica", "Broj indeksa", "Prezime", "Ime"]]
 
-# Export df_residual_students to schedules/additional_groups.xlsx
-df_residual_students.to_excel("schedules/additional_groups.xlsx", index=False)
+    # Export df_residual_students to schedules/additional_groups.xlsx
+    if len(prijave_filenames) == 2 and provera == "domaci":
+        df_residual_students.to_excel("schedules/domaci/additional_groups.xlsx", index=False)
+    else:
+        df_residual_students.to_excel("schedules/t1234/additional_groups.xlsx", index=False)

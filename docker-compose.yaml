@@ -7,3 +7,5 @@ services:
             - ./xls:/app/xls
             - ./schedules:/app/schedules
             - ./additional-classrooms:/app/additional-classrooms
+        environment:
+            - PROVERA=domaci

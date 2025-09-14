@@ -95,6 +95,8 @@ def exclude_non_payers(df_complete_combined, df_poll):
     print()
     return df_poll[pd.Series(mask)].reset_index(drop=True)
 
+import pandas as pd
+
 def calculate_group_availability(STUDENTS_PER_GROUP, availability_by_groups, xlsx_file, df_groups):
     """
     Izračunava preostalu dostupnost za svaku grupu i dodaje rezultat u prosleđenu listu.
@@ -102,8 +104,10 @@ def calculate_group_availability(STUDENTS_PER_GROUP, availability_by_groups, xls
     Argumenti:
         STUDENTS_PER_GROUP (int): Maksimalan broj studenata dozvoljen po grupi.
         availability_by_groups (list): Lista kojoj se dodaje izračunata dostupnost po grupama.
-        xlsx_file (str): Naziv Excel fajla, koristi se za izdvajanje identifikatora studijskog programa.
-        df_groups (pandas.DataFrame): DataFrame koji sadrži raspodelu po grupama sa kolonom "Grupa".
+        xlsx_file (str | None): Naziv Excel fajla (ako postoji). Ako nije prosleđen, 
+                                koristi se kolona 'Broj indeksa' za određivanje studijskog programa.
+        df_groups (pandas.DataFrame): DataFrame koji sadrži raspodelu po grupama sa kolonom "Grupa"
+                                      i opciono kolonom "Broj indeksa".
 
     Povratna vrednost:
         None: Funkcija rezultate dodaje direktno u availability_by_groups listu.
@@ -111,10 +115,30 @@ def calculate_group_availability(STUDENTS_PER_GROUP, availability_by_groups, xls
     Sporedni efekti:
         Menja availability_by_groups listu dodavanjem torka koji sadrži identifikator studijskog programa i Series sa dostupnošću po grupama.
     """
+
+    # Grupisanje po kolonama "Grupa" i računanje koliko studenata ima po grupi
     df_group_stats = df_groups.groupby("Grupa").size().sort_index()
+
+    # Računanje preostalih mesta po grupi
     df_group_stats = STUDENTS_PER_GROUP - df_group_stats
-    study_program = xlsx_file[:2]
-    availability_by_groups.append((study_program, df_group_stats))
+
+    # Određivanje studijskog programa i dodavanje rezultata
+    if xlsx_file:
+        study_program = xlsx_file[:2]  # Prva dva slova fajla, npr. RA, IN, PR
+        availability_by_groups.append((study_program, df_group_stats))
+    else:
+        if "Broj indeksa" in df_groups.columns:
+            # Grupisanje po smeru (prva dva slova broja indeksa)
+            df_groups['Smer'] = df_groups['Broj indeksa'].astype(str).str[:2]
+            for smer, group in df_groups.groupby('Smer'):
+                group_stats = group.groupby("Grupa").size().sort_index()
+                group_stats = STUDENTS_PER_GROUP - group_stats
+                availability_by_groups.append((smer, group_stats))
+            # Nakon korišćenja, možemo ukloniti privremenu kolonu 'Smer'
+            # df_groups.drop(columns=['Smer'], inplace=True)
+        else:
+            raise ValueError("Nije prosleđen xlsx_file niti kolona 'Broj indeksa' za određivanje studijskog programa.")
+
 
 def remove_polled_students_already_in_group(df_groups_combined, df_poll):
     """
