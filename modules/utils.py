@@ -233,6 +233,74 @@ def appoint_to_existing_groups(df_groups_combined, availability_by_groups, dfs, 
             appointed_student_indexes.append(student["Broj indeksa"])
     return df_groups_combined
 
+def appoint_using_average(df_groups_combined, availability_by_groups, dfs, appointed_student_indexes):
+    """
+    Dodeljuje studente postojećim grupama tako da se približno izjednači broj studenata po grupi.
+
+    Argumenti:
+        df_groups_combined (pd.DataFrame): DataFrame sa svim trenutno raspoređenim studentima i njihovim grupama.
+        availability_by_groups (list): Lista torki gde svaka torka sadrži identifikator studijskog programa i dostupnost po grupama.
+        dfs (list of tuples): Lista torki gde svaka torka sadrži status i DataFrame studenata za dodelu.
+        appointed_student_indexes (list): Lista u koju se dodaju brojevi indeksa studenata koji su dodeljeni grupama.
+        students_to_appoint_count (int): Ukupan broj studenata koji će biti dodeljeni.
+
+    Povratna vrednost:
+        pd.DataFrame: Ažurirani DataFrame sa novododeljenim studentima u odgovarajuće grupe.
+    """
+
+    total_groups = sum(len(group_stats) for _, group_stats in availability_by_groups)
+    if total_groups == 0:
+        print("Nema grupa za dodelu studenata.")
+        return df_groups_combined
+
+    # Pretvori dostupnost u DataFrame radi lakše obrade
+    group_availability = []
+    for study_program, group_stats in availability_by_groups:
+        for grupa, slobodna_mesta in group_stats.items():
+            # Broji studente u toj grupi i tom smeru (PR, RA, IN mogu imati istu grupu, ali su odvojeni)
+            current_students = df_groups_combined[
+                (df_groups_combined["Grupa"] == grupa) & (df_groups_combined["Smer"] == study_program)
+            ].shape[0]
+            group_availability.append({
+                "Smer": study_program,
+                "Grupa": grupa,
+                "Slobodna_mesta": slobodna_mesta,
+                "Trenutno_studenata": current_students
+            })
+    
+    df_avail = pd.DataFrame(group_availability)
+
+    # Dodeljujemo studente tako da se popunjavaju grupe sa ispodprosečnim brojem studenata
+    for status, students in dfs:
+        for index, student in students.iterrows():
+            df_avail = df_avail.sort_values(by=["Trenutno_studenata", "Slobodna_mesta"], ascending=[True, False])
+            target_group = df_avail.iloc[0] if not df_avail.empty else None
+
+            if target_group is None or target_group["Slobodna_mesta"] <= 0:
+                print("Nema više dostupnih mesta u grupama.")
+                break
+
+            # Dodaj studenta u target grupu
+            new_row = pd.DataFrame([{
+                "Grupa": target_group["Grupa"],
+                "Broj indeksa": student["Broj indeksa"],
+                "Prezime": student["Prezime"],
+                "Ime": student["Ime"],
+                "Smer": target_group["Smer"]
+            }])
+            df_groups_combined = pd.concat([df_groups_combined, new_row], ignore_index=True)
+            appointed_student_indexes.append(student["Broj indeksa"])
+
+            # Ažuriraj dostupnost
+            df_avail.loc[df_avail["Grupa"] == target_group["Grupa"], "Trenutno_studenata"] += 1
+            df_avail.loc[df_avail["Grupa"] == target_group["Grupa"], "Slobodna_mesta"] -= 1
+
+            # Ispisi stanje nakon svake dodele
+            print(f"Dodeljen student {student['Broj indeksa']} u grupu {target_group['Grupa']} (Smer: {target_group['Smer']}).")
+
+    return df_groups_combined
+
+
 def track_residual_students(dfs, appointed_student_indexes, residual_students):
     """
     Prati i dodaje studente koji nisu dodeljeni u listu preostalih studenata (residual_students).

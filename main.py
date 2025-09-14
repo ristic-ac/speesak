@@ -175,13 +175,20 @@ if len(prijave_filenames) == 2 and provera == "domaci":
 
 appointed_student_indexes = []
 no_students_before_first_appointing = len(students_in_groups)
+print("Broj studenata pre prvog raspoređivanja: ", no_students_before_first_appointing)
 
-students_in_groups = mutils.appoint_to_existing_groups(students_in_groups, classroom_availability_by_groups, dfs, appointed_student_indexes)
-
+if provera == "domaci":
+    students_in_groups = mutils.appoint_using_average(students_in_groups, classroom_availability_by_groups, dfs, appointed_student_indexes)
+else:
+    students_in_groups = mutils.appoint_to_existing_groups(students_in_groups, classroom_availability_by_groups, dfs, appointed_student_indexes)
+print("Stanje grupa POSLE raspoređivanja:")
 residual_students = []
 mutils.track_residual_students(dfs, appointed_student_indexes, residual_students)
 
 no_students_after_first_appointing = len(students_in_groups)
+
+print("Broj studenata posle prvog raspoređivanja: ", no_students_after_first_appointing)
+print("Broj raspoređenih studenata: ", len(appointed_student_indexes))
 
 if no_students_after_first_appointing - no_students_before_first_appointing != len(appointed_student_indexes):
     print("Greška: Broj raspoređenih studenata nije jednak razlici broja studenata pre i posle raspoređivanja.")
@@ -194,7 +201,7 @@ students_in_groups = students_in_groups.sort_values(["Smer", "Grupa"]).reset_ind
 
 # Set control column "RB" and "RBG", these mean "Redni Broj" and "Redni Broj u Grupi" (control numbers)
 students_in_groups['RB'] = students_in_groups.index + 1
-students_in_groups['RBG'] = students_in_groups.index % STUDENTS_PER_GROUP + 1
+students_in_groups['RBG'] = students_in_groups.groupby(['Smer', 'Grupa']).cumcount() + 1
 
 students_in_groups = students_in_groups[["RB", 'RBG', "Smer", "Grupa", "Broj indeksa", "Prezime", "Ime"]]
 
@@ -250,3 +257,4 @@ if not df_residual_students.empty:
         df_residual_students.to_excel("schedules/domaci/additional_groups.xlsx", index=False)
     else:
         df_residual_students.to_excel("schedules/t1234/additional_groups.xlsx", index=False)
+print("Kraj programa.")

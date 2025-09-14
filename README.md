@@ -52,7 +52,16 @@ Kreirajte anketu za studente koja sadrži sledeća polja:
 ### 3️⃣ Konverzija fajlova
 
 Konvertovani fajlovi će se nalaziti u direktorijumu `xlsx/`.  
-U njemu treba da bude i fajl **`PRIJAVE.xlsx`** sa prijavljenim studentima, u formatu:
+U njemu treba da budu i fajlovi sa prijavljenim studentima, u zavisnosti od režima rada:
+
+- Za režim `PROVERA=domaci`:
+  - **`PRIJAVE-SOV.xlsx`** – prijave za SOV (učionički)
+  - **`PRIJAVE-DOMACI.xlsx`** – prijave za domaći
+
+- Za režim `PROVERA=t1234`:
+  - **`PRIJAVE-T1234.xlsx`** – prijave za T1234 termin
+
+Svi fajlovi sa prijavama treba da imaju sledeće kolone:
 
 - **Ime**
 - **Prezime**
@@ -92,7 +101,23 @@ Program `main.py` će se automatski pokrenuti unutar kontejnera.
 
 ---
 
-### 6️⃣ Rezultati obrade
+### 6️⃣ Podešavanje režima rada
+
+Program koristi promenljivu okruženja `PROVERA` koja određuje način raspoređivanja:
+
+- `PROVERA=domaci` – koristi dva fajla prijava (SOV i DOMAĆI), automatski izbacuje studente koji su prijavljeni za domaći iz rasporeda za učionice.
+- `PROVERA=t1234` – koristi jedan fajl prijava (T1234).
+
+Primer pokretanja:
+
+```bash
+export PROVERA=domaci
+docker compose up --build
+```
+
+---
+
+### 7️⃣ Rezultati obrade
 
 Nakon izvršavanja, rezultati se nalaze u direktorijumu **`schedules/`**:
 

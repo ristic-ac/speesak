@@ -165,6 +165,7 @@ xls/*
 # All files within xlsx folder
 xlsx/*
 schedules/*
+schedules.bkp/*
 
 # All files within additional-classrooms folder
 # except for the example CSV file
