@@ -134,7 +134,7 @@ print("Broj studenata u prijavama nakon izbacivanja duplikata: ", len(students_t
 if len(prijave_filenames) == 2 and provera == "domaci":
     students_to_exclude = mutils.refactor_indexes(students_to_exclude)
     students_to_exclude = students_to_exclude.drop_duplicates(subset="Broj indeksa").reset_index(drop=True)
-    print("Broj studenata koji se izuzimaju iz prijava: ", len(students_to_exclude))
+    print("Broj studenata koji se izuzimaju iz rasporeda jer su odabrali domaći: ", len(students_to_exclude))
 
 EXCLUDE_NON_PAYERS = False
 
@@ -151,20 +151,19 @@ mstats.student_status_stats(students_to_appoint, poll=True)
 students_to_appoint = mutils.remove_polled_students_already_in_group(students_in_groups, students_to_appoint)
 grouped = mstats.student_status_stats(students_to_appoint, poll=True)
 
-dfs = [(status,students) for status, students in students_to_appoint.groupby('Način polaganja')]
-dfs = mutils.prioritize_new_students(dfs)
-
 # If domaci mode, exclude students_to_exclude from students_in_groups and students_to_appoint
 if len(prijave_filenames) == 2 and provera == "domaci":
+    # Find students who are in both appoint and exclude lists
+    in_both = students_to_appoint[students_to_appoint['Broj indeksa'].isin(students_to_exclude['Broj indeksa'])]
     students_in_groups = students_in_groups[~students_in_groups['Broj indeksa'].isin(students_to_exclude['Broj indeksa'])]
     students_to_appoint = students_to_appoint[~students_to_appoint['Broj indeksa'].isin(students_to_exclude['Broj indeksa'])]
-    print("Broj studenata u grupama nakon izbacivanja izuzetih: ", len(students_in_groups))
-    print("Broj studenata u prijavama nakon izbacivanja izuzetih: ", len(students_to_appoint))
+    print("Broj studenata u grupama nakon izbacivanja: ", len(students_in_groups))
+    print("Broj studenata u prijavama nakon izbacivanja: ", len(students_to_appoint))
     # Reset classroom_availability_by_groups
     classroom_availability_by_groups = []
     # Calculate group stats after exclusion, each group should have 16 places in total, calculate from students_in_groups column "Grupa"
     mutils.calculate_group_availability(STUDENTS_PER_GROUP, classroom_availability_by_groups, None, students_in_groups)
-    print("Broj grupa po smerovima nakon izbacivanja izuzetih: ")
+    print("Broj grupa po smerovima nakon izbacivanja: ")
     for smer, group_stats in classroom_availability_by_groups:
         nonzero_groups = group_stats[group_stats > 0]
         if not nonzero_groups.empty:
@@ -172,6 +171,10 @@ if len(prijave_filenames) == 2 and provera == "domaci":
             for grupa, slobodna_mesta in nonzero_groups.items():
                 print(f"  Grupa {grupa}: {slobodna_mesta} slobodnih mesta")
     print("=============================")
+
+
+dfs = [(status,students) for status, students in students_to_appoint.groupby('Način polaganja')]
+dfs = mutils.prioritize_new_students(dfs)
 
 appointed_student_indexes = []
 no_students_before_first_appointing = len(students_in_groups)
@@ -257,4 +260,9 @@ if not df_residual_students.empty:
         df_residual_students.to_excel("schedules/domaci/additional_groups.xlsx", index=False)
     else:
         df_residual_students.to_excel("schedules/t1234/additional_groups.xlsx", index=False)
+
+if provera == "domaci":
+    if not in_both.empty:
+        print("Studenti koji su i u prijavama za učionicu i za domaći (duplikati):")
+        print(in_both)
 print("Kraj programa.")
