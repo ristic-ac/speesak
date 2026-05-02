@@ -339,27 +339,24 @@ def appoint_residual_students(df_additional_classrooms, df_residual_students, ad
         - Funkcija ažurira kolone 'Ucionica', 'Termin' i 'RBG' u df_residual_students za svakog dodeljenog studenta.
         - Ako su svi studenti dodeljeni pre nego što se popune sva mesta, funkcija ispisuje poruku i vraća se ranije.
     """
-    BROJ_MI = 32
-    BROJ_NTP = 16
-    for index, row in df_additional_classrooms.iterrows():
-        classroom = row["Ucionica"]
-        time = row["Termin"]
-        if classroom[:2] == "MI":
-            for _ in range(BROJ_MI):
-                if additional_students_appointed >= additional_students_to_appoint:
-                    print("Dodeljeni su svi studenti.")
-                    return additional_students_appointed
-                df_residual_students.loc[additional_students_appointed, "Ucionica"] = classroom
-                df_residual_students.loc[additional_students_appointed, "Termin"] = time
-                df_residual_students.loc[additional_students_appointed, "RBG"] = int(additional_students_appointed % BROJ_MI + 1)
-                additional_students_appointed += 1
+    for _, row in df_additional_classrooms.iterrows():
+        classroom, time = row["Ucionica"], row["Termin"]
 
-        elif classroom[:3] == "NTP":
-            for _ in range(BROJ_NTP):
-                if additional_students_appointed >= additional_students_to_appoint:
-                    print("Dodeljeni su svi studenti.")
-                    return additional_students_appointed
-                df_residual_students.loc[additional_students_appointed, "Ucionica"] = classroom
-                df_residual_students.loc[additional_students_appointed, "Termin"] = time
-                df_residual_students.loc[additional_students_appointed, "RBG"] = int(additional_students_appointed % BROJ_NTP + 1)
-                additional_students_appointed += 1
+        if classroom.startswith("MI"):
+            capacity = 16 if classroom == "MI A2-2" else 32
+        elif classroom.startswith("NTP"):
+            capacity = 16
+        else:
+            continue
+
+        print(f"Dodeljujem {classroom}, sa kapacitetom {capacity}.")
+
+        for i in range(capacity):
+            if additional_students_appointed >= additional_students_to_appoint:
+                print("Dodeljeni su svi studenti.")
+                return additional_students_appointed
+
+            df_residual_students.loc[additional_students_appointed, ["Ucionica", "Termin", "RBG"]] = [classroom, time, i + 1]
+            additional_students_appointed += 1
+        
+        print(f"Dodelio sam sve studente u učionici {classroom}.")

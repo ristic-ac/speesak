@@ -8,4 +8,4 @@ services:
             - ./schedules:/app/schedules
             - ./additional-classrooms:/app/additional-classrooms
         environment:
-            - PROVERA=domaci
+            - PROVERA=t1234

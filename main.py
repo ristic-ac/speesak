@@ -146,6 +146,13 @@ if EXCLUDE_NON_PAYERS:
 students_to_appoint['Način polaganja'] = students_to_appoint['Broj indeksa'].map(
     students_in_complete.drop_duplicates(subset='Broj indeksa').set_index('Broj indeksa')['Način polaganja']
 ).fillna('Ponovo sluša')
+
+allowed_statuses = ['Polaže preko kolokvijuma', 'Prvi put sluša (Redovno)', 'Ponovo sluša', 'Prvi put sluša (Unapred slušanje)']
+invalid_students = students_to_appoint[~students_to_appoint['Način polaganja'].isin(allowed_statuses)]
+if not invalid_students.empty:
+    print("Studenti sa nevažećim 'Način polaganja':")
+    print(invalid_students[['Ime', 'Prezime', 'Broj indeksa', 'Način polaganja']].to_string(index=False))
+
 mstats.student_status_stats(students_to_appoint, poll=True)
 
 students_to_appoint = mutils.remove_polled_students_already_in_group(students_in_groups, students_to_appoint)
@@ -221,7 +228,7 @@ else:
 students_in_groups.to_excel(out_path, index=False)
 
 df_additional_classrooms = pd.read_csv("additional-classrooms/classrooms.csv")
-df_additional_classrooms = df_additional_classrooms.sort_values(["Termin", "Ucionica"]).reset_index(drop=True)
+# df_additional_classrooms = df_additional_classrooms.sort_values(["Termin", "Ucionica"]).reset_index(drop=True)
 print("Ucitao dodatne ucionice: ")
 print(df_additional_classrooms)
 
