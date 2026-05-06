@@ -319,44 +319,69 @@ def track_residual_students(dfs, appointed_student_indexes, residual_students):
                 residual_students.append(student)
 
 def appoint_residual_students(df_additional_classrooms, df_residual_students, additional_students_appointed, additional_students_to_appoint):
-    """
-    Dodeljuje preostale studente dodatnim učionicama na osnovu raspoloživog kapaciteta.
+    # 1. Prepare Data
+    df_rooms = df_additional_classrooms.copy()
+    # Clean classroom Smer (remove spaces, handle NaNs)
+    df_rooms['Smer'] = df_rooms['Smer'].fillna('').astype(str).str.strip().str.upper()
+    
+    # Extract Student Smer (first 2 chars of index, uppercase)
+    df_residual_students['Smer'] = df_residual_students['Broj indeksa'].str.strip().str[:2].str.upper()
+    
+    # Initialize assignment columns
+    df_residual_students['Ucionica'] = ""
+    df_residual_students['Termin'] = ""
+    df_residual_students['RBG'] = 0
+    
+    assigned_indices = set()
+    df_rooms['Capacity'] = df_rooms['Ucionica'].apply(
+        lambda x: 16 if x == "MI A2-2" or x.startswith("NTP") else 32 if x.startswith("MI") else 0
+    )
+    df_rooms['Occupancy'] = 0
 
-    Ova funkcija prolazi kroz prosleđeni DataFrame dodatnih učionica i dodeljuje studente iz DataFrame-a preostalih studenata tim učionicama, ažurirajući njihove podatke o učionici, terminu i broju grupe. Dodeljivanje traje dok se ne dodeli zadati broj dodatnih studenata ili dok se ne popune sva dostupna mesta.
+    # --- PASS 1: TARGETED (IN to IN, RA to RA, PR to PR) ---
+    for idx, row in df_rooms.iterrows():
+        target = row['Smer']
+        if target != "":
+            # Find students with matching Smer
+            matches = df_residual_students[
+                (df_residual_students['Smer'] == target) & 
+                (~df_residual_students.index.isin(assigned_indices))
+            ].head(int(row['Capacity']))
+            
+            for s_idx, _ in matches.iterrows():
+                occ = int(df_rooms.at[idx, 'Occupancy'])
+                df_residual_students.at[s_idx, 'Ucionica'] = row['Ucionica']
+                df_residual_students.at[s_idx, 'Termin'] = row['Termin']
+                df_residual_students.at[s_idx, 'RBG'] = occ + 1
+                assigned_indices.add(s_idx)
+                df_rooms.at[idx, 'Occupancy'] += 1
 
-    Argumenti:
-        df_additional_classrooms (pd.DataFrame): DataFrame sa informacijama o dodatnim učionicama, sa kolonama "Ucionica" i "Termin".
-        df_residual_students (pd.DataFrame): DataFrame studenata koji treba da budu dodeljeni; ažurira se na mestu sa podacima o učionici, terminu i broju grupe.
-        additional_students_appointed (int): Trenutni broj već dodeljenih studenata.
-        additional_students_to_appoint (int): Ukupan broj studenata koji treba da budu dodeljeni.
+    # --- PASS 2: FILL GAPS (Specified rooms that aren't full yet) ---
+    for idx, row in df_rooms.iterrows():
+        if row['Smer'] != "":
+            remaining = int(row['Capacity'] - row['Occupancy'])
+            if remaining > 0:
+                rest = df_residual_students[~df_residual_students.index.isin(assigned_indices)].head(remaining)
+                for s_idx, _ in rest.iterrows():
+                    occ = int(df_rooms.at[idx, 'Occupancy'])
+                    df_residual_students.at[s_idx, 'Ucionica'] = row['Ucionica']
+                    df_residual_students.at[s_idx, 'Termin'] = row['Termin']
+                    df_residual_students.at[s_idx, 'RBG'] = occ + 1
+                    assigned_indices.add(s_idx)
+                    df_rooms.at[idx, 'Occupancy'] += 1
 
-    Povratna vrednost:
-        int: Ažuriran broj dodeljenih studenata nakon procesa dodele.
+    # --- PASS 3: GENERAL ROOMS (Unspecified Smer in CSV) ---
+    for idx, row in df_rooms.iterrows():
+        if row['Smer'] == "":
+            remaining = int(row['Capacity'] - row['Occupancy'])
+            if remaining > 0:
+                gen_fill = df_residual_students[~df_residual_students.index.isin(assigned_indices)].head(remaining)
+                for s_idx, _ in gen_fill.iterrows():
+                    occ = int(df_rooms.at[idx, 'Occupancy'])
+                    df_residual_students.at[s_idx, 'Ucionica'] = row['Ucionica']
+                    df_residual_students.at[s_idx, 'Termin'] = row['Termin']
+                    df_residual_students.at[s_idx, 'RBG'] = occ + 1
+                    assigned_indices.add(s_idx)
+                    df_rooms.at[idx, 'Occupancy'] += 1
 
-    Napomene:
-        - Učionice koje počinju sa "MI" imaju kapacitet od 32 studenta.
-        - Učionice koje počinju sa "NTP" imaju kapacitet od 16 studenata.
-        - Funkcija ažurira kolone 'Ucionica', 'Termin' i 'RBG' u df_residual_students za svakog dodeljenog studenta.
-        - Ako su svi studenti dodeljeni pre nego što se popune sva mesta, funkcija ispisuje poruku i vraća se ranije.
-    """
-    for _, row in df_additional_classrooms.iterrows():
-        classroom, time = row["Ucionica"], row["Termin"]
-
-        if classroom.startswith("MI"):
-            capacity = 16 if classroom == "MI A2-2" else 32
-        elif classroom.startswith("NTP"):
-            capacity = 16
-        else:
-            continue
-
-        print(f"Dodeljujem {classroom}, sa kapacitetom {capacity}.")
-
-        for i in range(capacity):
-            if additional_students_appointed >= additional_students_to_appoint:
-                print("Dodeljeni su svi studenti.")
-                return additional_students_appointed
-
-            df_residual_students.loc[additional_students_appointed, ["Ucionica", "Termin", "RBG"]] = [classroom, time, i + 1]
-            additional_students_appointed += 1
-        
-        print(f"Dodelio sam sve studente u učionici {classroom}.")
+    return len(assigned_indices)

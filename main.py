@@ -243,8 +243,16 @@ df_residual_students["Termin"] = ""
 additional_students_appointed = 0
 additional_students_to_appoint = len(df_residual_students)
 
-# For each classroom in df_additional_classrooms
-additional_students_appointed = mutils.appoint_residual_students(df_additional_classrooms, df_residual_students, additional_students_appointed, additional_students_to_appoint)
+df_residual_students['Smer'] = df_residual_students['Broj indeksa'].str[:2]
+
+additional_students_appointed = mutils.appoint_residual_students(
+    df_additional_classrooms, 
+    df_residual_students, 
+    additional_students_appointed, 
+    additional_students_to_appoint
+)
+
+df_residual_students = df_residual_students.sort_values(by=['Termin', 'Ucionica', 'RBG']).reset_index(drop=True)
 
 if additional_students_appointed != additional_students_to_appoint:
     print("Greška: Broj raspoređenih studenata nije jednak broju studenata koje treba rasporediti.")
